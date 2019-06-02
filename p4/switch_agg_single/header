@@ -53,8 +53,8 @@ header udp_t {
 */
 
 header agg_t {
-    bit<2> status;
-    bit<30> step;
+    bit<8> status;
+    bit<32> step;
     bit<32> weight_0;
     bit<32> weight_1;
     bit<32> weight_2;

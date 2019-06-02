@@ -9,8 +9,6 @@ PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
 
 def udp_server(host=HOST, port=PORT):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
     log.info("Listening on udp %s:%s" % (host, port))
     s.bind((host, port))
     while True:

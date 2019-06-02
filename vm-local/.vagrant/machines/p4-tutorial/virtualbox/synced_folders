@@ -1,1 +1,0 @@
-{"virtualbox":{"/home/p4/tutorials":{"guestpath":"/home/p4/tutorials","hostpath":"/Users/age/git/in-network-aggregation/p4","disabled":false,"__vagrantfile":true},"/vagrant":{"guestpath":"/vagrant","hostpath":"/Users/age/git/in-network-aggregation/vm-local","disabled":false,"__vagrantfile":true}}}

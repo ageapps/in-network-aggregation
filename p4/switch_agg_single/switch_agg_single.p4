@@ -14,10 +14,10 @@ const bit<32> MAX_NODES = ((1 << 3) - 1);
 const bit<32> WEIGHTS_NUMBER = 5;
 
 // status messages
-const bit<2> STATUS_UPSTREAM = 0;
-const bit<2> STATUS_DOWNSTREAM = 1;
-const bit<2> STATUS_ERROR = 2;
-const bit<2> STATUS_WRONG_STEP = 3;
+const bit<8> STATUS_UPSTREAM = 0;
+const bit<8> STATUS_DOWNSTREAM = 1;
+const bit<8> STATUS_ERROR = 2;
+const bit<8> STATUS_WRONG_STEP = 3;
 
 const bit<32> COUNTER_IDX = 0x1;
 
@@ -85,8 +85,8 @@ control MyEgress(inout headers hdr,
     register<bit<4>>(MAX_NODES) node_counter;
 
     // counter of nodes that I received the gradient from
-    register<bit<30>>(MAX_STEPS) step_counter;
-    bit<30> current_step;
+    register<bit<32>>(MAX_STEPS) step_counter;
+    bit<32> current_step;
     bit<4> node_count;
     bit<32> temp_value;
     
@@ -149,7 +149,7 @@ control MyEgress(inout headers hdr,
         acc_aggregation.read(hdr.agg.weight_4, 4);
     }
 
-    action set_error(in bit<2> type) {
+    action set_error(in bit<8> type) {
         hdr.agg.status = type;
     }
 

@@ -1,0 +1,6 @@
+[submodule "ml/simple_setup/python_sockets"]
+	path = ml/simple_setup/python_sockets
+	url = https://github.com/ageapps/python_sockets
+[submodule "ml/simple_setup/mini_ml_framework"]
+	path = ml/simple_setup/mini_ml_framework
+	url = https://github.com/ageapps/mini_ml_framework
