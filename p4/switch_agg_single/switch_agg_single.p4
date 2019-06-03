@@ -4,20 +4,19 @@
 
 #include "header"
 #include "parser"
-
-const bit<4> NODE_NUMBER = 2;
-
+#include "params"
 
 const bit<32> MAX_STEPS = ((1 << 20) - 1);
-const bit<32> MAX_NODES = ((1 << 3) - 1);
+const bit<32> MAX_NODES = ((1 << 20) - 1);
 
-const bit<32> WEIGHTS_NUMBER = 5;
+const bit<32> PARAM_NUMBER = 5;
 
-// status messages
-const bit<8> STATUS_UPSTREAM = 0;
-const bit<8> STATUS_DOWNSTREAM = 1;
-const bit<8> STATUS_ERROR = 2;
-const bit<8> STATUS_WRONG_STEP = 3;
+// state messages
+const bit<8> STATE_INITIAL = 0;
+const bit<8> STATE_LEARNING = 1;
+const bit<8> STATE_FINISHED = 2;
+const bit<8> STATE_ERROR = 3;
+const bit<8> STATE_WRONG_STEP = 4;
 
 const bit<32> COUNTER_IDX = 0x1;
 
@@ -79,106 +78,152 @@ control MyEgress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     
+    register<bit<32>>(PARAM_NUMBER) curr_aggregation;
     // aggregated gradients from step-1
-    register<bit<32>>(WEIGHTS_NUMBER) curr_aggregation;
-    register<bit<32>>(WEIGHTS_NUMBER) acc_aggregation;
-    register<bit<4>>(MAX_NODES) node_counter;
-
+    register<bit<32>>(PARAM_NUMBER) acc_aggregation;
+    
     // counter of nodes that I received the gradient from
-    register<bit<32>>(MAX_STEPS) step_counter;
+    register<bit<32>>(MAX_NODES) node_register;
+
+    register<bit<32>>(MAX_STEPS) step_register;
+    
+    register<bit<8>>(256) state_register;
+
+
     bit<32> current_step;
-    bit<4> node_count;
+    bit<8> current_state;
+    bit<32> node_count;
     bit<32> temp_value;
     
     action aggregate() {
-        // increase node counter
-        node_counter.write(COUNTER_IDX, node_count+1);
-
         // aggregate values
         curr_aggregation.read(temp_value, 0);
-        curr_aggregation.write(0, temp_value + hdr.agg.weight_0);
+        curr_aggregation.write(0, temp_value + hdr.agg.param_0);
 
         curr_aggregation.read(temp_value, 1);
-        curr_aggregation.write(1, temp_value + hdr.agg.weight_1);
+        curr_aggregation.write(1, temp_value + hdr.agg.param_1);
         
         curr_aggregation.read(temp_value, 2);
-        curr_aggregation.write(2, temp_value + hdr.agg.weight_2);
+        curr_aggregation.write(2, temp_value + hdr.agg.param_2);
 
         curr_aggregation.read(temp_value, 3);
-        curr_aggregation.write(3, temp_value + hdr.agg.weight_3);
+        curr_aggregation.write(3, temp_value + hdr.agg.param_3);
 
         curr_aggregation.read(temp_value, 4);
-        curr_aggregation.write(4, temp_value + hdr.agg.weight_4);
+        curr_aggregation.write(4, temp_value + hdr.agg.param_4);
     }
     
-    action next_step() {
-        // increase step count
-        step_counter.write(COUNTER_IDX, current_step+1);
-
-        // reset node counter to 1
-        node_counter.write(COUNTER_IDX, 1);
-
+    action save_aggregation() {
         // cache curr_aggregation into acc_aggregation
         // reset curr_aggregation
         curr_aggregation.read(temp_value, 0);
-        curr_aggregation.write(0, hdr.agg.weight_0);
+        curr_aggregation.write(0, 0);
         acc_aggregation.write(0, temp_value);
 
         curr_aggregation.read(temp_value, 1);
-        curr_aggregation.write(1, hdr.agg.weight_1);
+        curr_aggregation.write(1, 0);
         acc_aggregation.write(1, temp_value);
         
         curr_aggregation.read(temp_value, 2);
-        curr_aggregation.write(2, hdr.agg.weight_2);
+        curr_aggregation.write(2, 0);
         acc_aggregation.write(2, temp_value);
 
         curr_aggregation.read(temp_value, 3);
-        curr_aggregation.write(3, hdr.agg.weight_3);
+        curr_aggregation.write(3, 0);
         acc_aggregation.write(3, temp_value);
 
         curr_aggregation.read(temp_value, 4);
-        curr_aggregation.write(4, hdr.agg.weight_4);
+        curr_aggregation.write(4, 0);
         acc_aggregation.write(4, temp_value);
     }
 
-    action update_header() {
-        acc_aggregation.read(hdr.agg.weight_0, 0);
-        acc_aggregation.read(hdr.agg.weight_1, 1);
-        acc_aggregation.read(hdr.agg.weight_2, 2);
-        acc_aggregation.read(hdr.agg.weight_3, 3);
-        acc_aggregation.read(hdr.agg.weight_4, 4);
+    action send_aggregation() {
+        acc_aggregation.read(hdr.agg.param_0, 0);
+        acc_aggregation.read(hdr.agg.param_1, 1);
+        acc_aggregation.read(hdr.agg.param_2, 2);
+        acc_aggregation.read(hdr.agg.param_3, 3);
+        acc_aggregation.read(hdr.agg.param_4, 4);
     }
 
     action set_error(in bit<8> type) {
-        hdr.agg.status = type;
+        hdr.agg.state = type;
+    }
+    
+    action send_current_state() {
+        hdr.agg.state = current_state;
+        hdr.agg.step = current_step;
+    }
+
+    action send_parameters() {
+        hdr.agg.state = current_state;
+        hdr.agg.step = NODE_NUMBER;
+        hdr.agg.param_0 = ITERATIONS;
+        hdr.agg.param_1 = ETA;
+        hdr.agg.param_2 = INPUT_SIZE;
+        hdr.agg.param_3 = OUTPUT_SIZE;
+        hdr.agg.param_4 = SCALE_FACTOR;
+    }
+
+    action increate_node_count() {
+        node_register.write(COUNTER_IDX, node_count+1);
+    }
+
+    action increate_step() {
+        step_register.write(COUNTER_IDX, current_step+1);
     }
 
     action get_counters() {
-        step_counter.read(current_step, COUNTER_IDX);
-        node_counter.read(node_count, COUNTER_IDX);
+        step_register.read(current_step, COUNTER_IDX);
+        node_register.read(node_count, COUNTER_IDX);
+        state_register.read(current_state, COUNTER_IDX);
+    }
+
+    action update_state(in bit<8> state) {
+        state_register.write(COUNTER_IDX, state);
+    }
+
+    action reset_node_count() {
+        node_register.write(COUNTER_IDX, 0);
     }
 
     apply {
         if (hdr.agg.isValid()){
-            if (hdr.agg.status == STATUS_UPSTREAM) {
-                get_counters();
-                if (node_count == NODE_NUMBER){
-                    if ((current_step+1) == hdr.agg.step){
-                        next_step();
-                        update_header();
-                    } else {
-                        set_error(STATUS_WRONG_STEP);
-                    }
-                } else {
-                    if (current_step == (hdr.agg.step)){
+            get_counters();
+            if (hdr.agg.state == current_state) {
+                if (current_state == STATE_INITIAL){
+                    increate_node_count();
+                    // TODO: check not duplicate nodes
+                    send_parameters();
+                    if (node_count == NODE_NUMBER){
+                        update_state(STATE_LEARNING);
+                        reset_node_count();
+                    } 
+                } else if (current_state == STATE_LEARNING){
+                    if (current_step == hdr.agg.step){
+                        increate_node_count();
                         aggregate();
-                        update_header();
+                        send_aggregation();
+                        if (node_count == NODE_NUMBER){
+                            save_aggregation();
+                            reset_node_count();
+                            if (current_step == ITERATIONS){
+                                update_state(STATE_FINISHED);
+                            } else {
+                                increate_step();
+                            }
+                        }
                     } else {
-                        set_error(STATUS_WRONG_STEP);
+                        set_error(STATE_WRONG_STEP);
                     }
+                } else if (current_state == STATE_FINISHED){
+                    // state is finished, send state
+                    send_current_state();
+                } else {
+                    set_error(STATE_ERROR);
                 }
             } else {
-                set_error(STATUS_ERROR);
+                // state is wrong, answer with current state
+                send_current_state();
             }
         }
     }

@@ -50,8 +50,8 @@ def aggregate_values(params, new_values):
     return params
 
 
-def send_error(server, destination):
-    server.send_message(get_formated_message(STATE_ERROR,0,[]), destination)
+def send_error(server, destination, error=STATE_ERROR):
+    server.send_message(get_formated_message(error,0,[]), destination)
 
 def main():
     proto = CustomProtocol()
@@ -94,7 +94,7 @@ def main():
                 print('Registering worker: {}'.format(client_address))
                 workers.append(client_address)
                 print('Sending parameters')
-                msg = get_formated_message(STATE_INITIAL,worker_num, learning_parameters)
+                msg = get_formated_message(STATE_INITIAL, worker_num, learning_parameters)
                 server.send_message(msg, client_address)
             else:
                 print('Worker {} is already registered'.format(client_address))
@@ -109,7 +109,7 @@ def main():
 
             if int(step) != current_step:
                 print('Wrong step {}/{}'.format(step, current_step))
-                send_error(server, client_address)
+                send_error(server, client_address, error=STATE_WRONG_STEP)
                 continue
             else:
                 if client_address not in workers:

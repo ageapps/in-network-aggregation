@@ -1,12 +1,13 @@
 import struct
 import re
 
-STATE_LEARNING = 0
-STATE_WAITING = 1
-STATE_INITIAL = 4
-STATE_FINISHED = 6
-STATE_ERROR = 2
-STATE_WRONG_STEP = 3
+STATE_INITIAL = 0
+STATE_LEARNING = 1
+STATE_FINISHED = 2
+STATE_ERROR = 3
+STATE_WRONG_STEP = 4
+# this state is only used by workers
+STATE_WAITING = 10
 
 
 class CustomProtocol(object):
@@ -15,8 +16,8 @@ class CustomProtocol(object):
     The packet has the following structure
 
     |   status 1   |
-    |     step 4       |   weight0 4   |   weight1 4   |
-    |     weight2 4    |   weight3 4   |   weight4 4   |
+    |     step 4       |   param0 4   |   param1 4   |
+    |     param2 4    |   param3 4   |   param4 4   |
     """
     def __init__(self, header_mask='! B i i i i i i', encoding='utf-8', debug=False):
         self.fragmented_flag = 1

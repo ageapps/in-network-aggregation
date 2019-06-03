@@ -1,0 +1,37 @@
+
+// Learning parameters
+const bit<32> NODE_NUMBER = 2;
+const bit<32> ITERATIONS = 50;
+const bit<32> ETA = 1;
+const bit<32> INPUT_SIZE  = 200;
+const bit<32> OUTPUT_SIZE  = 1;
+const bit<32> SCALE_FACTOR  = 1000;
+
+
+    // action handle_learning() {
+
+    // }
+    // action handle_finish() {
+
+    // }
+    // action handle_unknown() {
+
+    // }
+
+    // table handle_state {
+    //     key = {
+    //         hdr.agg.state: exact;
+    //     }
+    //     actions = {
+    //         handle_initial;
+    //         handle_learning;
+    //         handle_finish;
+    //         handle_unknown;
+    //     }
+    //     default_action = handle_unknown();
+    //     const entries = {
+    //         STATE_INITIAL: handle_initial();
+    //         STATE_LEARNING: handle_learning();
+    //         STATE_FINISHED: handle_finish();
+    //     }
+    // }
