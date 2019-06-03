@@ -2,6 +2,7 @@ import time
 import sys
 import os
 import math
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,18 +16,14 @@ from customprotocol import *
 from python_sockets.client import Client
 
 
-HOST = '10.0.1.1'
-PORT = 1234
+HOST = 'localhost'
+PORT = 12344
 QUEUE_SIZE = 5
 UDP_CLIENT = True
 HEADER_SIZE = 20
 scale_factor = 1
 worker_number = 1
-
-
-proto = CustomProtocol()
-socket_adapter = Client(PORT, host=HOST, udp=UDP_CLIENT, protocol=proto)
-
+client = None
 
 def scale_up(elements, factor):
     for i, e in enumerate(elements):
@@ -68,7 +65,7 @@ def on_params_update(update_params, step):
             # send weights
             print('Step {} | Sending weights: {}'.format(step, current_param))
             msg = get_formated_message(STATE_LEARNING, step, w)
-            answer = socket_adapter.send_message(msg, wait_answer=True)
+            answer = client.send_message(msg, wait_answer=True)
             status = answer[0]
             step = answer[1]
             new_parameters = answer[2:]
@@ -93,14 +90,20 @@ def on_params_update(update_params, step):
 def main():
     global scale_factor
     global worker_number
+    global client
     current_state = STATE_INITIAL
-    worker_name = 'worker'
+    host = HOST
+    worker_name = 'worker'+datetime.now().strftime('-%H:%M:%S')
+    
     if len(sys.argv) > 1:
-        worker_name = sys.argv[1]
+        host = sys.argv[1]
+
+    proto = CustomProtocol()
+    client = Client(PORT, host=host, udp=UDP_CLIENT, protocol=proto)
 
     print('Initializing worker ' + worker_name)
     while True:
-        answer = socket_adapter.send_message(
+        answer = client.send_message(
             get_formated_message(current_state, 0, []), wait_answer=True)
         status = answer[0]
         step = answer[1]
@@ -137,7 +140,7 @@ def main():
     current_state = STATE_WAITING
     while True:
         print('Waiting to start learning')
-        answer = socket_adapter.send_message(
+        answer = client.send_message(
             get_formated_message(current_state, 0, []), wait_answer=True)
         status = answer[0]
         step = answer[1]
@@ -152,7 +155,7 @@ def main():
     cost = trainGD(model, optim, X, Y, iterations, eta=eta,
                    update_func=on_params_update, v=False)
     plotCostAndData(model, X, Y, cost, fig_name=worker_name)
-    # socket_adapter.send_message({ 'name': 'Time', 'time': time.time()})
+    # client.send_message({ 'name': 'Time', 'time': time.time()})
 
 
 if __name__ == '__main__':

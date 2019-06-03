@@ -18,17 +18,15 @@ input_size = 200
 output_size = 1
 scale_factor = 1000
 
-eta = int(eta * scale_factor)
+scaled_eta = int(eta * scale_factor)
 
 learning_parameters = [
     iterations,
-    eta,
+    scaled_eta,
     input_size,
     output_size,
     scale_factor
 ]
-
-worker_num = 1
 
 def get_formated_message(status, step, weights):
     values = []
@@ -58,12 +56,20 @@ def send_error(server, destination):
 def main():
     proto = CustomProtocol()
     server = UDPServer(PORT,HOST, protocol=proto)
+    worker_num = 1
+    if len(sys.argv) > 1:
+        worker_num = sys.argv[1]
+
     server.start()
     current_status = STATE_INITIAL
     workers = []
     current_step = 0
     aggregated_params = []
     cached_params = []
+    
+    print("Params | workers: {} | iterations: {} | eta: {} | input: {} | out: {} | scale: {}".format(
+        worker_num, iterations, eta, input_size, output_size, scale_factor
+    ))
 
     while True:
         msg, client_address = server.receive_message(send_answer=False)
