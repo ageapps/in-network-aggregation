@@ -46,7 +46,6 @@ class CustomProtocol(object):
 
     def receive_packet(self, receive_fn):
         result = receive_fn(self.header_size)
-
         address = None
         if isinstance(result, tuple):
             msg_bytes, address = result
@@ -68,7 +67,6 @@ class CustomProtocol(object):
         """
 
         address = None
-
         msg_bytes, address = self.receive_packet(receive_fn)
         if not len(msg_bytes):
             raise Exception("Error receiving the header")

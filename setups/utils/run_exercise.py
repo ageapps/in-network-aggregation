@@ -94,7 +94,7 @@ class ExerciseTopo(Topo):
             host_sw   = link['node2']
             host_num = int(host_name[1:])
             sw_num   = int(host_sw[1:])
-            host_ip = "10.0.%d.%d" % (sw_num, host_num)
+            host_ip = "10.0.%d.%d" % (host_num, host_num)
             host_mac = '00:00:00:00:%02x:%02x' % (sw_num, host_num)
             # Each host IP should be /24, so all exercise traffic will use the
             # default gateway (the switch) without sending ARP requests.
@@ -178,6 +178,7 @@ class ExerciseRunner:
             topo = json.load(f)
         self.hosts = topo['hosts']
         self.switches = topo['switches']
+        self.logger('Found hosts: {} switches: {}'.format(len(self.hosts), len(self.switches)))
         self.links = self.parse_links(topo['links'])
 
         # Ensure all the needed directories exist and are directories
@@ -238,7 +239,9 @@ class ExerciseRunner:
 
             if link_dict['node1'][0] == 'h':
                 assert link_dict['node2'][0] == 's', 'Hosts should be connected to switches, not ' + str(link_dict['node2'])
+            self.logger("New link: {}".format(link_dict))
             links.append(link_dict)
+        
         return links
 
 
@@ -403,7 +406,7 @@ if __name__ == '__main__':
 
     args = get_args()
     exercise = ExerciseRunner(args.topo, args.log_dir, args.pcap_dir,
-                              args.switch_json, args.behavioral_exe, args.quiet)
+                              args.switch_json, args.behavioral_exe, False)
 
     exercise.run_exercise()
 

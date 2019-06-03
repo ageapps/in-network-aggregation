@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
 
 from python_sockets.server import UDPServer
 from python_sockets.protocol import FragmentProtocol
@@ -9,8 +9,6 @@ from customprotocol import *
 
 PORT = 12344
 HOST = ''
-UDP_SERVER = True
-HEADER_SIZE = 20
 
 iterations = 50
 eta = 0.001
@@ -49,16 +47,15 @@ def aggregate_values(params, new_values):
 
     return params
 
-
 def send_error(server, destination, error=STATE_ERROR):
     server.send_message(get_formated_message(error,0,[]), destination)
 
 def main():
     proto = CustomProtocol()
-    server = UDPServer(PORT,HOST, protocol=proto)
+    server = UDPServer(PORT, HOST, protocol=proto)
     worker_num = 1
     if len(sys.argv) > 1:
-        worker_num = sys.argv[1]
+        worker_num = int(sys.argv[1])
 
     server.start()
     current_status = STATE_INITIAL
@@ -72,12 +69,13 @@ def main():
     ))
 
     while True:
+        print('Waiting for messages...')
         msg, client_address = server.receive_message(send_answer=False)
         status = msg[0]
         step = msg[1]
         parameters = msg[2:]
 
-        if status > STATE_FINISHED:
+        if status is STATE_WRONG_STEP or status is STATE_ERROR:
             print('Received error message: {}'.format(msg))
             continue
         

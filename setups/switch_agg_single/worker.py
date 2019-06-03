@@ -7,8 +7,8 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+
 from mini_ml_framework.modules.helpers import *
 from mini_ml_framework.modules.trainer import trainBatchGD, trainGD
 from mini_ml_framework.modules import Linear, LossMSE, ReLu, Tanh, Sequential
@@ -16,11 +16,9 @@ from customprotocol import *
 from python_sockets.client import Client
 
 
-HOST = 'localhost'
+HOST = '127.0.0.1'
 PORT = 12344
-QUEUE_SIZE = 5
 UDP_CLIENT = True
-HEADER_SIZE = 20
 scale_factor = 1
 worker_number = 1
 client = None
@@ -154,7 +152,7 @@ def main():
 
     cost = trainGD(model, optim, X, Y, iterations, eta=eta,
                    update_func=on_params_update, v=False)
-    plotCostAndData(model, X, Y, cost, fig_name=worker_name)
+    plotCostAndData(model, X, Y, cost, fig_name='fig-'+worker_name)
     # client.send_message({ 'name': 'Time', 'time': time.time()})
 
 

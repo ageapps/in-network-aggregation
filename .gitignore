@@ -1,6 +1,8 @@
 .vscode/
 .vagrant/
 
+fig-*
+
 logs/
 pcaps/
 

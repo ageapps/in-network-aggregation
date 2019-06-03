@@ -1,6 +1,6 @@
-[submodule "p4/switch_agg_single/python_sockets"]
-	path = p4/switch_agg_single/python_sockets
-	url = https://github.com/ageapps/python_sockets
-[submodule "p4/switch_agg_single/mini_ml_framework"]
-	path = p4/switch_agg_single/mini_ml_framework
+[submodule "utils/mini_ml_framework"]
+	path = utils/mini_ml_framework
 	url = https://github.com/ageapps/mini_ml_framework
+[submodule "utils/python_sockets"]
+	path = utils/python_sockets
+	url = https://github.com/ageapps/python_sockets
