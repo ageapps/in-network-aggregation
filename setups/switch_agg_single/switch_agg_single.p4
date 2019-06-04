@@ -6,8 +6,7 @@
 #include "parser"
 #include "params"
 
-const bit<32> MAX_STEPS = ((1 << 20) - 1);
-const bit<32> MAX_NODES = ((1 << 20) - 1);
+const bit<32> MAX_COUNTERS = ((1 << 20) - 1);
 
 const bit<32> PARAM_NUMBER = 5;
 
@@ -18,7 +17,9 @@ const bit<8> STATE_FINISHED = 2;
 const bit<8> STATE_ERROR = 3;
 const bit<8> STATE_WRONG_STEP = 4;
 
-const bit<32> COUNTER_IDX = 0x1;
+const bit<32> NODES_IDX = 0x1;
+const bit<32> STEP_IDX = 0x2;
+const bit<32> STATE_IDX = 0x3;
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -90,12 +91,8 @@ control MyEgress(inout headers hdr,
     // aggregated gradients from step-1
     register<bit<32>>(PARAM_NUMBER) acc_aggregation;
     
-    // counter of nodes that I received the gradient from
-    register<bit<32>>(MAX_NODES) node_register;
-
-    register<bit<32>>(MAX_STEPS) step_register;
-    
-    register<bit<8>>(256) state_register;
+    // register that holds counters of nodes, step, and state
+    register<bit<32>>(MAX_COUNTERS) counters_register;
 
 
     bit<32> current_step;
@@ -173,23 +170,24 @@ control MyEgress(inout headers hdr,
     }
 
     action load_counters() {
-        step_register.read(current_step, COUNTER_IDX);
-        node_register.read(node_count, COUNTER_IDX);
-        state_register.read(current_state, COUNTER_IDX);
+        counters_register.read(node_count, NODES_IDX);
+        counters_register.read(current_step, STEP_IDX);
+        counters_register.read(temp_value, STATE_IDX);
+        current_state = (bit<8>)temp_value;
     }
 
     action update_state(in bit<8> state) {
-        state_register.write(COUNTER_IDX, state);
+        counters_register.write(STATE_IDX,(bit<32>)state);
     }
 
     action update_step(in bit<32> step) {
         current_step = step;
-        step_register.write(COUNTER_IDX, step);
+        counters_register.write(STEP_IDX, step);
     }
 
     action update_node_count(in bit<32> count) {
         node_count = count;
-        node_register.write(COUNTER_IDX, count);
+        counters_register.write(NODES_IDX, count);
     }
 
     apply {
