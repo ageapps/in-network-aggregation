@@ -101,7 +101,6 @@ control MyEgress(inout headers hdr,
     bit<32> temp_value;
     
     action aggregate() {
-        // aggregate values
         curr_aggregation.read(temp_value, 0);
         curr_aggregation.write(0, temp_value + hdr.agg.param_0);
 
@@ -206,7 +205,6 @@ control MyEgress(inout headers hdr,
                     if (current_step == hdr.agg.step){
                         update_node_count(node_count+1);
                         aggregate();
-                        send_aggregation();
                         if (node_count == NODE_NUMBER){
                             update_aggregation();
                             update_node_count(0);
@@ -216,6 +214,7 @@ control MyEgress(inout headers hdr,
                                 update_step(current_step+1);
                             }
                         }
+                        send_aggregation();
                     } else {
                         send_error(STATE_WRONG_STEP);
                     }

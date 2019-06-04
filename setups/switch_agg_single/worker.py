@@ -57,8 +57,9 @@ def on_params_update(update_params, step):
 
         current_param = current_param.tolist()
         columns = len(current_param[0])
+        
+        # get values by column
         for c in range(columns):
-            # get values by column
             w = [row[c] for row in current_param]
             # send weights
             print('Step {} | Sending weights: {}'.format(step, current_param))
@@ -72,12 +73,13 @@ def on_params_update(update_params, step):
             print('Got answer: ', answer)
             if status != STATE_LEARNING:
                 raise Exception('Error on answer')
+            
+            print('Lengths: {}/{}'.format(len(new_parameters), len(w)))
+            if len(new_parameters) >= len(w):
+                for j, row in enumerate(current_param):
+                    current_param[j][c] = new_parameters[j]
 
-            if len(new_parameters) == len(w):
-                for j, row in enumerate(param):
-                    row[c] = new_parameters[j]
-
-                update_params[i] = np.array(param)
+                update_params[i] = np.array(current_param)
             else:
                 print('Empty weights')
 
