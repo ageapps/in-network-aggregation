@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../utils'))
 
 from python_sockets.server import UDPServer
 from python_sockets.protocol import FragmentProtocol
@@ -51,12 +51,20 @@ def send_error(server, destination, error=STATE_ERROR):
     server.send_message(get_formated_message(error,0,[]), destination)
 
 def main():
-    proto = CustomProtocol()
-    server = UDPServer(PORT, HOST, protocol=proto)
+    port = PORT
     worker_num = 1
+    
     if len(sys.argv) > 1:
         worker_num = int(sys.argv[1])
+    elif len(sys.argv) > 2:
+        port = int(sys.argv[2])
+    else:
+        print('pass 2 arguments: <workers>({}) <port>({})'.format(worker_num, port))
+        exit(1)
 
+    
+    proto = CustomProtocol()
+    server = UDPServer(port, HOST, protocol=proto)
     server.start()
     current_status = STATE_INITIAL
     workers = []
@@ -125,6 +133,7 @@ def main():
                 current_step += 1                
                 print('Sending parameters to workers')
                 msg = get_formated_message(current_status, current_step, cached_params)
+                # Broadcast aggregated results
                 for w in workers:
                     server.send_message(msg, w)
                 workers = []

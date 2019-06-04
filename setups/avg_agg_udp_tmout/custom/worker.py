@@ -2,12 +2,13 @@ import time
 import sys
 import os
 import math
+import socket
 from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../utils'))
 
 from mini_ml_framework.modules.helpers import *
 from mini_ml_framework.modules.trainer import trainBatchGD, trainGD
@@ -17,11 +18,12 @@ from python_sockets.client import Client
 
 
 HOST = '127.0.0.1'
-PORT = 1234
+PORT = 12344
 UDP_CLIENT = True
 scale_factor = 1
 worker_number = 1
 client = None
+MAX_TRIES = 20
 
 def scale_up(elements, factor):
     for i, e in enumerate(elements):
@@ -41,12 +43,29 @@ def generate_data(input_size, output_size):
     return X, Y
 
 
-def get_formated_message(status, step, weights):
+def get_formated_message(state, step, weights):
     values = []
-    values.append(status)
+    values.append(state)
+    values.append(1)
     values.append(step)
     values.extend(scale_up(weights, scale_factor))
     return values
+
+def get_state_str(state):
+    state_str = 'UNKNOWN'
+    if state == STATE_INITIAL:
+        state_str = 'INITIAL'
+    elif state == STATE_LEARNING:
+        state_str = 'LEARNING'
+    elif state == STATE_FINISHED:
+        state_str = 'FINISHED'
+    elif state == STATE_ERROR:
+        state_str = 'ERROR'
+    elif state == STATE_WRONG_STEP:
+        state_str = 'WRONG_STEP'
+    elif state == STATE_WAITING:
+        state_str = 'WAITING'
+    return state_str
 
 
 def on_params_update(update_params, step):
@@ -62,20 +81,40 @@ def on_params_update(update_params, step):
         for c in range(columns):
             w = [row[c] for row in current_param]
             # send weights
-            print('Step {} | Sending weights: {}'.format(step, current_param))
             msg = get_formated_message(STATE_LEARNING, step, w)
-            answer = client.send_message(msg, wait_answer=True)
-            status = answer[0]
-            step = answer[1]
-            new_parameters = answer[2:]
+            print('Step {} | Sending: {}'.format(step, msg))
+            # try aggregation
+            for t in range(MAX_TRIES):
+                answer = client.send_message(msg, wait_answer=True)
+                answer_state = answer[0]
+                print('Answer: {} | answer_state: {}'.format(answer, get_state_str(answer_state)))
+                if answer_state != STATE_LEARNING:
+                    print('trying again...')
+                    time.sleep(0.1)
+                else:
+                    break
+            
+            answer_workers = answer[1]
+            answer_step = answer[2]
+            new_parameters = answer[3:]
+
+            if answer_state != STATE_LEARNING:
+              raise Exception('Error receiving parameters')
+              
+            if answer_workers <= 0:
+              raise Exception('Error, workers cannot be 0 or less')
+            
+            
+
+            if answer_step != step:
+              raise Exception('Error wrong step | Current: {} | Received: {}'.format(step, answer_step))
+
             # print(new_parameters)
             new_parameters = scale_down(new_parameters, scale_factor)
-            print('Got answer: ', answer)
-            if status != STATE_LEARNING:
-                raise Exception('Error on answer')
             
-            print('Lengths: {}/{}'.format(len(new_parameters), len(w)))
-            if len(new_parameters) >= len(w):
+            
+            print('Prams: {} | Lengths: {}/{}'.format(new_parameters, len(new_parameters), len(w)))
+            if any(item != 0 for item in new_parameters) and len(new_parameters) >= len(w):
                 for j, row in enumerate(current_param):
                     current_param[j][c] = new_parameters[j]
 
@@ -93,15 +132,24 @@ def main():
     global client
     current_state = STATE_INITIAL
     host = HOST
+    port = PORT
     worker_name = 'worker'+datetime.now().strftime('-%H:%M:%S')
     
     if len(sys.argv) > 1:
         host = sys.argv[1]
+    else:
+        print('pass 2 arguments: <server ip>({}) <port>({})'.format(host, port))
+        exit(1)
+
+    if len(sys.argv) > 2:
+        port = int(sys.argv[2])
+    
+
 
     proto = CustomProtocol()
-    client = Client(PORT, host=host, udp=UDP_CLIENT, protocol=proto)
+    client = Client(port, host=host, udp=UDP_CLIENT, protocol=proto)
 
-    print('Initializing worker ' + worker_name)
+    print('Initializing worker',worker_name,len(sys.argv) )
     new_parameters = []
     register_request = get_formated_message(current_state, 0, new_parameters)
     for i in range(5):
@@ -111,31 +159,31 @@ def main():
             print('Timeout {} | trying it again...'.format(i))
             continue
 
-        status = answer[0]
-        step = answer[1]
-        new_parameters = answer[2:]
+        state = answer[0]
+        worker_number = answer[1]
+        step = answer[2]
+        new_parameters = answer[3:]
 
-        if status == current_state:
+        if state == current_state:
             print('Worker successfully registered')
             break
-        elif status == STATE_FINISHED:
+        elif state == STATE_FINISHED:
             print('Starting setup again')
             continue
         else :
             raise Exception('Error on setup | message:{}'.format(answer))
 
-    if len(new_parameters) > 0 and status == current_state:
+    if len(new_parameters) > 0 and state == current_state:
         iterations = new_parameters[0]
         eta = new_parameters[1]
         input_size = new_parameters[2]
         output_size = new_parameters[3]
         scale_factor = new_parameters[4]
         eta = eta / scale_factor
-        worker_number = step
         print('Parameters | iterations: {} | eta: {} | in: {} | out: {} | scale: {} | workers: {}'.format(
             iterations, eta, input_size, output_size, scale_factor, worker_number))
     else:
-        raise Exception('Error with initial parameters | message:{}'.format(answer))
+        raise Exception('Error with initial parameters')
 
     x, y = generate_data(input_size, output_size)
     X = standarize(x)
@@ -148,15 +196,14 @@ def main():
         print('Waiting to start learning')
         answer = client.send_message(
             get_formated_message(current_state, 0, []), wait_answer=True)
-        status = answer[0]
+        state = answer[0]
         step = answer[1]
-        parameters = answer[2:]
-        if status == STATE_LEARNING:
+        if state == STATE_LEARNING:
             current_state = STATE_WAITING
             print('Start learning')
             break
 
-        time.sleep(2)
+        time.sleep(1)
 
     cost = trainGD(model, optim, X, Y, iterations, eta=eta,
                    update_func=on_params_update, v=False)

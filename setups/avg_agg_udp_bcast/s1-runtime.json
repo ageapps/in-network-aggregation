@@ -1,7 +1,7 @@
 {
   "target": "bmv2",
-  "p4info": "build/switch_agg_single.p4info",
-  "bmv2_json": "build/switch_agg_single.json",
+  "p4info": "build/avg_agg_udp_bcast.p4info",
+  "bmv2_json": "build/avg_agg_udp_bcast.json",
   "table_entries": [
     {
       "table": "MyIngress.ipv4_lpm",
