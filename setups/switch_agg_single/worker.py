@@ -17,7 +17,7 @@ from python_sockets.client import Client
 
 
 HOST = '127.0.0.1'
-PORT = 12344
+PORT = 1234
 UDP_CLIENT = True
 scale_factor = 1
 worker_number = 1
@@ -100,34 +100,40 @@ def main():
     client = Client(PORT, host=host, udp=UDP_CLIENT, protocol=proto)
 
     print('Initializing worker ' + worker_name)
-    while True:
-        answer = client.send_message(
-            get_formated_message(current_state, 0, []), wait_answer=True)
+    new_parameters = []
+    register_request = get_formated_message(current_state, 0, new_parameters)
+    for i in range(5):
+        try:
+            answer = client.send_message(register_request, wait_answer=True)
+        except socket.timeout:
+            print('Timeout {} | trying it again...'.format(i))
+            continue
+
         status = answer[0]
         step = answer[1]
         new_parameters = answer[2:]
 
         if status == current_state:
             print('Worker successfully registered')
-        else:
-            print('Error on setup | message:{}'.format(answer))
             break
+        elif status == STATE_FINISHED:
+            print('Starting setup again')
+            continue
+        else :
+            raise Exception('Error on setup | message:{}'.format(answer))
 
-        if len(new_parameters) > 0:
-            iterations = new_parameters[0]
-            eta = new_parameters[1]
-            input_size = new_parameters[2]
-            output_size = new_parameters[3]
-            scale_factor = new_parameters[4]
-            eta = eta / scale_factor
-            worker_number = step
-            print('Parameters | iterations: {} | eta: {} | in: {} | out: {} | scale: {} | workers: {}'.format(
-                iterations, eta, input_size, output_size, scale_factor, worker_number))
-            break
-
-        else:
-            print('Waiting for setup data')
-            time.sleep(2)
+    if len(new_parameters) > 0 and status == current_state:
+        iterations = new_parameters[0]
+        eta = new_parameters[1]
+        input_size = new_parameters[2]
+        output_size = new_parameters[3]
+        scale_factor = new_parameters[4]
+        eta = eta / scale_factor
+        worker_number = step
+        print('Parameters | iterations: {} | eta: {} | in: {} | out: {} | scale: {} | workers: {}'.format(
+            iterations, eta, input_size, output_size, scale_factor, worker_number))
+    else:
+        raise Exception('Error with initial parameters | message:{}'.format(answer))
 
     x, y = generate_data(input_size, output_size)
     X = standarize(x)
