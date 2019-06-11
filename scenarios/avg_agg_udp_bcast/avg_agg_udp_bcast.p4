@@ -11,15 +11,15 @@ const bit<32> MAX_COUNTERS = ((1 << 20) - 1);
 const bit<32> PARAM_NUMBER = 5;
 
 // state messages
-const bit<8> STATE_INITIAL = 0;
+const bit<8> STATE_SETUP = 0;
 const bit<8> STATE_LEARNING = 1;
 const bit<8> STATE_FINISHED = 2;
 const bit<8> STATE_ERROR = 3;
 const bit<8> STATE_WRONG_STEP = 4;
 
-const bit<32> NODES_IDX = 0x2;
-const bit<32> STEP_IDX = 0x3;
-const bit<32> STATE_IDX = 0x4;
+const bit<32> NODES_IDX = 0x1;
+const bit<32> STEP_IDX = 0x2;
+const bit<32> STATE_IDX = 0x3;
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -142,8 +142,6 @@ control MyEgress(inout headers hdr,
     }
 
     action send_aggregation() {
-        hdr.agg.step = current_step;
-        hdr.agg.node_count = (bit<8>)node_count;
         acc_aggregation.read(hdr.agg.param_0, 0);
         acc_aggregation.read(hdr.agg.param_1, 1);
         acc_aggregation.read(hdr.agg.param_2, 2);
@@ -162,23 +160,19 @@ control MyEgress(inout headers hdr,
 
     action send_parameters() {
         hdr.agg.state = current_state;
-        hdr.agg.node_count = (bit<8>)NODE_NUMBER;
-        hdr.agg.step = current_step;
+        hdr.agg.step = NODE_NUMBER;
         hdr.agg.param_0 = ITERATIONS;
         hdr.agg.param_1 = ETA;
         hdr.agg.param_2 = INPUT_SIZE;
-        hdr.agg.param_3 = OUTPUT_SIZE;
+        hdr.agg.param_3 = OUTPUT_CLASSES;
         hdr.agg.param_4 = SCALE_FACTOR;
-    }
-
-    action load_state() {
-        counters_register.read(temp_value, STATE_IDX);
-        current_state = (bit<8>)temp_value;
     }
 
     action load_counters() {
         counters_register.read(node_count, NODES_IDX);
         counters_register.read(current_step, STEP_IDX);
+        counters_register.read(temp_value, STATE_IDX);
+        current_state = (bit<8>)temp_value;
     }
 
     action update_state(in bit<8> state) {
@@ -186,57 +180,45 @@ control MyEgress(inout headers hdr,
     }
 
     action update_step(in bit<32> step) {
+        current_step = step;
         counters_register.write(STEP_IDX, step);
     }
 
-    action increment_step() {
-        counters_register.read(temp_value, STEP_IDX);
-        counters_register.write(STEP_IDX, temp_value+1);
-        counters_register.read(current_step, STEP_IDX);
-    }
-
     action update_node_count(in bit<32> count) {
+        node_count = count;
         counters_register.write(NODES_IDX, count);
-    }
-    action increment_node_count() {
-        counters_register.read(temp_value, NODES_IDX);
-        counters_register.write(NODES_IDX, temp_value+1);
-        counters_register.read(node_count, NODES_IDX);
     }
 
     apply {
         if (hdr.agg.isValid()){
-            load_state();
+            load_counters();
             if (hdr.agg.state == current_state) {
-                load_counters();
-                if (current_state == STATE_INITIAL){
+                if (current_state == STATE_SETUP){
+                    update_node_count(node_count+1);
                     // TODO: check not duplicate nodes
                     send_parameters();
-                    increment_node_count();
                     if (node_count == NODE_NUMBER){
-                        update_node_count(0);
                         update_state(STATE_LEARNING);
+                        update_node_count(0);
                     } 
                 } else if (current_state == STATE_LEARNING){
-                    load_counters();
                     if (current_step == hdr.agg.step){
+                        update_node_count(node_count+1);
                         aggregate();
-                        increment_node_count();
-                        send_aggregation();
-                        if (node_count >= NODE_NUMBER){
+                        if (node_count == NODE_NUMBER){
                             update_aggregation();
                             update_node_count(0);
-                            increment_step();
-                            if (current_step >= ITERATIONS){
+                            if (current_step == ITERATIONS-1){
                                 update_state(STATE_FINISHED);
+                            } else {
+                                update_step(current_step+1);
                             }
                         }
+                        send_aggregation();
                     } else {
-                        hdr.agg.step = current_step;
                         send_error(STATE_WRONG_STEP);
                     }
                 } else if (current_state == STATE_FINISHED){
-                    load_counters();
                     // state is finished, send state
                     send_current_state();
                 } else {
@@ -245,14 +227,12 @@ control MyEgress(inout headers hdr,
             } else {
                 // if finished and another worker asks to start, back to initial
                 if (current_state == STATE_FINISHED){
-                    if (hdr.agg.state == STATE_INITIAL){
-                        update_state(STATE_INITIAL);
+                    if (hdr.agg.state == STATE_SETUP){
+                        update_state(STATE_SETUP);
                         update_step(0);
-                        update_aggregation();
                         update_node_count(0);
                     } 
                 }
-                load_counters();
                 // state is wrong, answer with current state
                 send_current_state();
             }

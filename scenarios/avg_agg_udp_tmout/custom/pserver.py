@@ -13,7 +13,8 @@ HOST = ''
 iterations = 50
 eta = 0.001
 input_size = 200
-output_size = 1
+input_features = 1
+output_classes = 1
 scale_factor = 1000
 
 scaled_eta = int(eta * scale_factor)
@@ -22,7 +23,8 @@ learning_parameters = [
     iterations,
     scaled_eta,
     input_size,
-    output_size,
+    input_features,
+    output_classes,
     scale_factor
 ]
 
@@ -64,17 +66,17 @@ def main():
     if len(sys.argv) > 2:
         port = int(sys.argv[2])
     
-    proto = CustomProtocol()
+    proto = CustomProtocol(header_mask='! B B I i i i i i i')
     server = UDPServer(port, HOST, protocol=proto)
     server.start()
-    current_status = STATE_INITIAL
+    current_status = STATE_SETUP
     workers = []
     current_step = 0
     curr_aggregation = []
     acc_aggregation = []
     
-    print("Params | workers: {} | iterations: {} | eta: {} | input: {} | out: {} | scale: {}".format(
-        worker_num, iterations, eta, input_size, output_size, scale_factor
+    print("Params | workers: {} | iterations: {} | eta: {} | input: {} | feat: {} | out: {} | scale: {}".format(
+        worker_num, iterations, eta, input_size, input_features, output_classes, scale_factor
     ))
 
     while True:
@@ -96,13 +98,13 @@ def main():
             continue
 
 
-        if current_status == STATE_INITIAL:
+        if current_status == STATE_SETUP:
             # setup phase
             if client_address not in workers:
                 print('Registering worker: {}'.format(client_address))
                 workers.append(client_address)
                 print('Sending setup')
-                msg = get_formated_message(STATE_INITIAL, worker_num, current_step, learning_parameters)
+                msg = get_formated_message(STATE_SETUP, worker_num, current_step, learning_parameters)
                 server.send_message(msg, client_address)
             else:
                 print('Worker {} is already registered'.format(client_address))

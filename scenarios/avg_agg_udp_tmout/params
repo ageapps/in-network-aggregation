@@ -4,5 +4,6 @@ const bit<32> NODE_NUMBER = 1;
 const bit<32> ITERATIONS = 50;
 const bit<32> ETA = 1;
 const bit<32> INPUT_SIZE  = 200;
-const bit<32> OUTPUT_SIZE  = 1;
+const bit<32> INPUT_FEATURES  = 1;
+const bit<32> OUTPUT_CLASSES  = 1;
 const bit<32> SCALE_FACTOR  = 1000;

@@ -1,7 +1,7 @@
 import struct
 import re
 
-STATE_INITIAL = 0
+STATE_SETUP = 0
 STATE_LEARNING = 1
 STATE_FINISHED = 2
 STATE_ERROR = 3
@@ -19,7 +19,7 @@ class CustomProtocol(object):
     |     step 4       |   param0 4   |   param1 4   |
     |     param2 4    |   param3 4   |   param4 4   |
     """
-    def __init__(self, header_mask='! B B i i i i i i', encoding='utf-8', debug=False):
+    def __init__(self, header_mask='! B B i i i i i', encoding='utf-8', debug=False):
         self.fragmented_flag = 1
         self.header_mask = header_mask
         self.header_elements = len(re.sub('[^A-Za-z?]+', '', header_mask))
@@ -31,6 +31,8 @@ class CustomProtocol(object):
         if len(values) < self.header_elements:
             padding = [0] * (self.header_elements-len(values))
             values.extend(padding)
+        if self.debug:
+            print("Sending values: {}".format(values))
         return struct.pack(self.header_mask, *values)
 
     def get_messages_to_send(self, values: list) -> list:

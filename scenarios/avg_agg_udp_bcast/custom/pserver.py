@@ -66,7 +66,7 @@ def main():
     proto = CustomProtocol()
     server = UDPServer(port, HOST, protocol=proto)
     server.start()
-    current_status = STATE_INITIAL
+    current_status = STATE_SETUP
     workers = []
     current_step = 0
     aggregated_params = []
@@ -94,13 +94,13 @@ def main():
             continue
 
 
-        if current_status == STATE_INITIAL:
+        if current_status == STATE_SETUP:
             # setup phase
             if client_address not in workers:
                 print('Registering worker: {}'.format(client_address))
                 workers.append(client_address)
                 print('Sending parameters')
-                msg = get_formated_message(STATE_INITIAL, worker_num, learning_parameters)
+                msg = get_formated_message(STATE_SETUP, worker_num, learning_parameters)
                 server.send_message(msg, client_address)
             else:
                 print('Worker {} is already registered'.format(client_address))
