@@ -201,7 +201,7 @@ control MyEgress(inout headers hdr,
     action increment_step() {
         counters_register.read(temp_value, STEP_IDX);
         counters_register.write(STEP_IDX, temp_value+1);
-        counters_register.read(current_step, STEP_IDX);
+        //counters_register.read(current_step, STEP_IDX);
     }
 
     action update_node_count(in bit<32> count) {
@@ -216,38 +216,46 @@ control MyEgress(inout headers hdr,
     apply {
         if (hdr.agg.isValid()){
             load_state();
-            if (hdr.agg.state == current_state) {
-                load_counters();
+            if (current_state == hdr.agg.state) {
                 if (current_state == STATE_SETUP){
                     // TODO: check not duplicate nodes
-                    send_parameters();
-                    increment_node_count();
-                    if (node_count == NODE_NUMBER){
-                        update_node_count(0);
-                        update_state(STATE_LEARNING);
-                    } 
-                } else if (current_state == STATE_LEARNING){
-                    load_counters();
-                    if (current_step == hdr.agg.step){
-                        aggregate();
+                    @atomic {
+                        load_counters();
+                        send_parameters();
+                    }
+                    @atomic {
                         increment_node_count();
-                        send_aggregation();
-                        if (node_count >= NODE_NUMBER){
-                            update_aggregation();
+                        if (node_count == NODE_NUMBER){
                             update_node_count(0);
-                            increment_step();
-                            if (current_step >= ITERATIONS){
-                                update_state(STATE_FINISHED);
-                            }
+                            update_state(STATE_LEARNING);
                         }
-                    } else {
-                        hdr.agg.step = current_step;
-                        send_error(STATE_WRONG_STEP);
+                    }
+                } else if (current_state == STATE_LEARNING){
+                    @atomic {
+                        load_counters();
+                        if (current_step == hdr.agg.step){
+                            aggregate();
+                            increment_node_count();
+                            send_aggregation();
+                            if (node_count >= NODE_NUMBER){
+                                update_aggregation();
+                                update_node_count(0);
+                                increment_step();
+                                if (current_step >= ITERATIONS){
+                                    update_state(STATE_FINISHED);
+                                }
+                            }
+                        } else {
+                            hdr.agg.step = current_step;
+                            send_error(STATE_WRONG_STEP);
+                        }
                     }
                 } else if (current_state == STATE_FINISHED){
-                    load_counters();
-                    // state is finished, send state
-                    send_current_state();
+                    @atomic {
+                        load_counters();
+                        // state is finished, send state
+                        send_current_state();
+                    }
                 } else {
                     send_error(STATE_ERROR);
                 }
@@ -261,9 +269,11 @@ control MyEgress(inout headers hdr,
                         update_node_count(0);
                     } 
                 }
-                load_counters();
-                // state is wrong, answer with current state
-                send_current_state();
+                @atomic {
+                    load_counters();
+                    // state is wrong, answer with current state
+                    send_current_state();
+                }
             }
         }
     }

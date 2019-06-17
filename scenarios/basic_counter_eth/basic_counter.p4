@@ -2,8 +2,8 @@
 #include <core.p4>
 #include <v1model.p4>
 
-#include "header"
-#include "parser"
+#include "includes/header.p4"
+#include "includes/parser.p4"
 
 const bit<32> MAX_COUNTER_VALUE = 1 << 16;
 
@@ -69,13 +69,15 @@ control MyEgress(inout headers hdr,
 
     }
     action addCounter() {
-        // hdr.pcounter.count = hdr.pcounter.count + 1;
-        // get register myCount
-        packetCounter.read( tmp, meta.index);        
-        // add myCount header
-        hdr.pcounter.count = tmp+1;
-        // sum to the register
-        packetCounter.write(meta.index, tmp+1);
+        @atomic {
+            // hdr.pcounter.count = hdr.pcounter.count + 1;
+            // get register myCount
+            packetCounter.read( tmp, meta.index);        
+            // add myCount header
+            hdr.pcounter.count = tmp+1;
+            // sum to the register
+            packetCounter.write(meta.index, tmp+1);
+        }
     }
 
     apply { 

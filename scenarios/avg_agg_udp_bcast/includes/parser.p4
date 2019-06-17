@@ -1,3 +1,6 @@
+#ifndef _PARSER_P4_
+#define _PARSER_P4_
+
 // switch udp port to receive aggregated traffic
 const bit<16> UDP_PORT = 1234;
 const bit<16> TYPE_IPV4 = 0x0800;
@@ -95,3 +98,5 @@ control MyDeparser(packet_out packet, in headers hdr) {
         packet.emit(hdr.agg);
     }
 }
+
+#endif

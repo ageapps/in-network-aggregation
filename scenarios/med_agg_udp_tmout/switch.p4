@@ -2,13 +2,13 @@
 #include <core.p4>
 #include <v1model.p4>
 
-#include "header"
-#include "parser"
+#include "includes/header.p4"
+#include "includes/parser.p4"
 #include "params"
 
 const bit<32> MAX_COUNTERS = ((1 << 20) - 1);
 
-const bit<32> PARAM_NUMBER = 5;
+const bit<32> PARAM_NUMBER = 6;
 
 // state messages
 const bit<8> STATE_SETUP = 0;
@@ -20,6 +20,7 @@ const bit<8> STATE_WRONG_STEP = 4;
 const bit<32> NODES_IDX = 0x2;
 const bit<32> STEP_IDX = 0x3;
 const bit<32> STATE_IDX = 0x4;
+const bit<32> MEDIANS_IDX = 0x5;
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -99,70 +100,154 @@ control MyEgress(inout headers hdr,
     bit<8> current_state;
     bit<32> node_count;
     bit<32> temp_value;
-    
-    action aggregate() {
-        curr_aggregation.read(temp_value, 0);
-        curr_aggregation.write(0, temp_value + hdr.agg.param_0);
-
-        curr_aggregation.read(temp_value, 1);
-        curr_aggregation.write(1, temp_value + hdr.agg.param_1);
-        
-        curr_aggregation.read(temp_value, 2);
-        curr_aggregation.write(2, temp_value + hdr.agg.param_2);
-
-        curr_aggregation.read(temp_value, 3);
-        curr_aggregation.write(3, temp_value + hdr.agg.param_3);
-
-        curr_aggregation.read(temp_value, 4);
-        curr_aggregation.write(4, temp_value + hdr.agg.param_4);
-
-        curr_aggregation.read(temp_value, 5);
-        curr_aggregation.write(5, temp_value + hdr.agg.param_5);
-    }
+    bit<32> median_index;
     
     action update_aggregation() {
-        // cache curr_aggregation into acc_aggregation
-        // reset curr_aggregation
-        curr_aggregation.read(temp_value, 0);
-        curr_aggregation.write(0, 0);
-        acc_aggregation.write(0, temp_value);
+        bit<32> temp_index = 0;
+        bit<32> median = 0;
+        bit<32> median2 = 0;
+        bit<32> median_idx = 0;
+        bit<2> odd = 0;
 
-        curr_aggregation.read(temp_value, 1);
-        curr_aggregation.write(1, 0);
-        acc_aggregation.write(1, temp_value);
+        if ((NODE_NUMBER & 1) == 0){
+            odd = 0;
+        } else {
+            odd = 1;
+        }
+        // param 0
+        // get stored median index
+        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        // get median value
+        curr_aggregation.read(median, median_idx);
+        if (odd == 0) {
+            median_idx = median_idx-1;
+        } 
+        curr_aggregation.read(median2, median_idx);
+        acc_aggregation.write(0, median+median2);
+
+        // param 1
+        temp_index = temp_index + NODE_NUMBER;
+        // get stored median index
+        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        // get median value
+        curr_aggregation.read(median, median_idx);
+        if (odd == 0) {
+            median_idx = median_idx-1;
+        } 
+        curr_aggregation.read(median2, median_idx);
+        acc_aggregation.write(1, median+median2);
         
-        curr_aggregation.read(temp_value, 2);
-        curr_aggregation.write(2, 0);
-        acc_aggregation.write(2, temp_value);
+        // param 2
+        temp_index = temp_index + NODE_NUMBER;
+        // get stored median index
+        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+                // get median value
+        curr_aggregation.read(median, median_idx);
+        if (odd == 0) {
+            median_idx = median_idx-1;
+        } 
+        curr_aggregation.read(median2, median_idx);
+        acc_aggregation.write(2, median+median2);
 
-        curr_aggregation.read(temp_value, 3);
-        curr_aggregation.write(3, 0);
-        acc_aggregation.write(3, temp_value);
+        // param 3
+        temp_index = temp_index + NODE_NUMBER;
+        // get stored median index
+        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        // get median value
+        curr_aggregation.read(median, median_idx);
+        if (odd == 0) {
+            median_idx = median_idx-1;
+        } 
+        curr_aggregation.read(median2, median_idx);
+        acc_aggregation.write(3, median+median2);
 
-        curr_aggregation.read(temp_value, 4);
-        curr_aggregation.write(4, 0);
-        acc_aggregation.write(4, temp_value);
+        // param 4
+        temp_index = temp_index + NODE_NUMBER;
+        // get stored median index
+        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        // get median value
+        curr_aggregation.read(median, median_idx);
+        if (odd == 0) {
+            median_idx = median_idx-1;
+        } 
+        curr_aggregation.read(median2, median_idx);
+        acc_aggregation.write(4, median+median2);
 
-        curr_aggregation.read(temp_value, 5);
-        curr_aggregation.write(5, 0);
-        acc_aggregation.write(5, temp_value);
+
+        // param 5
+        temp_index = temp_index + NODE_NUMBER;
+        // get stored median index
+        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        // get median value
+        curr_aggregation.read(median, median_idx);
+        if (odd == 0) {
+            median_idx = median_idx-1;
+        } 
+        curr_aggregation.read(median2, median_idx);
+        acc_aggregation.write(5, median+median2);
+    }
+    
+    action sort_parameter(in bit<32> start_index, in bit<32> parameter) {
+        bit<32> value = parameter;
+        bit<32> temp = parameter;
+        bit<32> temp2 = parameter;
+        bit<32> current_index = start_index;
+        
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 0 && temp < temp_value){
+            temp = temp_value;
+            temp_value = value;
+        }
+        curr_aggregation.write(current_index, temp_value);
+
+
+        current_index = current_index + 1;
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 1 && temp < temp_value){
+            temp2 = temp_value;
+            temp_value = temp;
+            temp = temp2;
+        }
+        curr_aggregation.write(current_index, temp_value);
+
+        current_index = current_index + 1;
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 2 && temp < temp_value){
+            temp2 = temp_value;
+            temp_value = temp;
+            temp = temp2;
+        }
+        curr_aggregation.write(current_index, temp_value);
+
+        current_index = current_index + 1;
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 3 && temp < temp_value){
+            temp2 = temp_value;
+            temp_value = temp;
+            temp = temp2;
+        }
+        curr_aggregation.write(current_index, temp_value);
+
+        current_index = current_index + 1;
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 4 && temp < temp_value){
+            temp2 = temp_value;
+            temp_value = temp;
+            temp = temp2;
+        }
+        curr_aggregation.write(current_index, temp_value);
+
+        curr_aggregation.write(start_index+node_count, temp);
+        
+        counters_register.read(temp_value, MEDIANS_IDX+start_index);
+        if ((node_count*2) == NODE_NUMBER-1 || (node_count*2) == NODE_NUMBER){
+            // this should be the median index
+            temp_value = node_count;
+        }
+        counters_register.write(MEDIANS_IDX+start_index, temp_value);
     }
 
-    action send_ack() {
-        hdr.agg.step = current_step;
-        hdr.agg.node_count = (bit<8>)node_count;
-        hdr.agg.param_0 = 0;
-        hdr.agg.param_1 = 0;
-        hdr.agg.param_2 = 0;
-        hdr.agg.param_3 = 0;
-        hdr.agg.param_4 = 0;
-        hdr.agg.param_5 = 0;
-    }
-
-    action send_bcast() {
-        standard_metadata.mcast_grp = 1;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-
+    action send_aggregation() {
         hdr.agg.step = current_step;
         hdr.agg.node_count = (bit<8>)node_count;
         acc_aggregation.read(hdr.agg.param_0, 0);
@@ -243,8 +328,16 @@ control MyEgress(inout headers hdr,
                 } else if (current_state == STATE_LEARNING){
                     load_counters();
                     if (current_step == hdr.agg.step){
-                        aggregate();
+                        // sort all parameters
+                        sort_parameter(0,hdr.agg.param_0);
+                        sort_parameter(NODE_NUMBER,hdr.agg.param_1);
+                        sort_parameter(2*NODE_NUMBER,hdr.agg.param_2);
+                        sort_parameter(3*NODE_NUMBER,hdr.agg.param_3);
+                        sort_parameter(4*NODE_NUMBER,hdr.agg.param_4);
+                        sort_parameter(5*NODE_NUMBER,hdr.agg.param_5);
                         increment_node_count();
+                        send_aggregation();
+
                         if (node_count >= NODE_NUMBER){
                             update_aggregation();
                             update_node_count(0);
@@ -252,9 +345,6 @@ control MyEgress(inout headers hdr,
                             if (current_step >= ITERATIONS){
                                 update_state(STATE_FINISHED);
                             }
-                            send_bcast();
-                        } else {
-                            send_ack();
                         }
                     } else {
                         hdr.agg.step = current_step;
@@ -283,6 +373,7 @@ control MyEgress(inout headers hdr,
             }
         }
     }
+}
 
 
 /*************************************************************************
