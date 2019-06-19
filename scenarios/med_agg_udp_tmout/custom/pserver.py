@@ -1,6 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../utils'))
+import statistics
 
 from python_sockets.server import UDPServer
 from python_sockets.protocol import FragmentProtocol
@@ -16,6 +17,7 @@ input_size = 200
 input_features = 1
 output_classes = 1
 scale_factor = 1000
+
 
 scaled_eta = int(eta * scale_factor)
 
@@ -36,19 +38,25 @@ def get_formated_message(status, workers, step, weights):
     values.extend(weights)
     return values
 
-def aggregate_values(params, new_values):
-    if len(params) == 0:
-        print('Params size is 0', params, new_values)
-        return new_values
+def get_medians(param_mtx):
+    weights_cols = list(zip(*param_mtx))
+    medians = []
+    for v in weights_cols:
+        median = statistics.median(v)
+        medians.append(int(2*median))
+    
+    print('Medians are: {}'.format(medians))
+    return medians
 
-    assert len(params) == len(
-        new_values), 'Sizes are not the same: {}/{}'.format(len(params), len(new_values))
+def aggregate_values(param_mtx, new_values):
+    
+    if len(param_mtx) > 0:
+        assert len(param_mtx[0]) == len(
+            new_values), 'Sizes are not the same: {}/{}'.format(len(param_mtx[0]), len(new_values))
 
     print('Aggregating parameters')
-    for i, param in enumerate(params):
-        params[i] = (param + new_values[i])
-
-    return params
+    param_mtx.append(new_values)
+    return param_mtx
 
 def send_error(server, destination, error=STATE_ERROR, workers=0):
     server.send_message(get_formated_message(error,workers,0,[]), destination)
@@ -72,8 +80,8 @@ def main():
     current_status = STATE_SETUP
     workers = []
     current_step = 0
-    curr_aggregation = []
-    acc_aggregation = []
+    curr_aggregation = [] # matrix N_nodes X N_weights
+    acc_aggregation = [] # vector N_weights
     
     print("Params | workers: {} | iterations: {} | eta: {} | input: {} | feat: {} | out: {} | scale: {}".format(
         worker_num, iterations, eta, input_size, input_features, output_classes, scale_factor
@@ -135,7 +143,7 @@ def main():
 
             if len(workers) == worker_num:
                 print('All workers aggregated in step:', current_step)
-                acc_aggregation = curr_aggregation
+                acc_aggregation = get_medians(curr_aggregation)
                 curr_aggregation = []
                 print('Next step')
                 current_step += 1                

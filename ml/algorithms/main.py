@@ -1,6 +1,8 @@
 import statistics
 from recursive import *
 from insertion import *
+from batch_median import *
+from median_of_medians import *
 
 
 
@@ -12,7 +14,9 @@ def main():
     print("Reference medians are: {}".format([statistics.median(row) for row in values]))
 
     # recursive_sort(values)
-    insertion_sort(values)
+    # insertion_sort(values)
+    # batch_median(values)
+    median_of_medians(values)
 
 
 if __name__ == "__main__":

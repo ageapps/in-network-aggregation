@@ -32,7 +32,7 @@ def scale_up(elements, factor):
 
 def scale_down(elements, factor):
     for i, e in enumerate(elements):
-        elements[i] = e / (factor*worker_number)
+        elements[i] = e / (factor*2)
     return elements
 
 
@@ -121,7 +121,8 @@ def on_params_update(update_params, step):
             else:
                 print('Empty weights')
 
-    print('New update params are:', update_params)
+    print('New update params are:')
+    print(update_params)
     return update_params
 
 
@@ -184,8 +185,8 @@ def main():
         input_features = new_parameters[3]
         output_classes = new_parameters[4]
         scale_factor = new_parameters[5]
-        eta = eta / scale_factor
-        print('Parameters | iterations: {} | eta: {} | in: {} | feat: {} | out: {} | scale: {} | workers: {}'.format(
+        eta = eta / scale_factor 
+        print('Parameters | iterations: {} | eta: {} | n: {} | in: {} | out: {} | scale: {} | workers: {}'.format(
             iterations, eta, input_size, input_features, output_classes, scale_factor, worker_number))
     else:
         raise Exception('Error with initial parameters')

@@ -9,6 +9,7 @@
 const bit<32> MAX_COUNTERS = ((1 << 20) - 1);
 
 const bit<32> PARAM_NUMBER = 6;
+const bit<32> MAX_NODES = 6;
 
 // state messages
 const bit<8> STATE_SETUP = 0;
@@ -88,7 +89,7 @@ control MyEgress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     
-    register<bit<32>>(PARAM_NUMBER) curr_aggregation;
+    register<bit<32>>(PARAM_NUMBER*MAX_NODES) curr_aggregation;
     // aggregated gradients from step-1
     register<bit<32>>(PARAM_NUMBER) acc_aggregation;
     
@@ -104,87 +105,74 @@ control MyEgress(inout headers hdr,
     
     action update_aggregation() {
         bit<32> temp_index = 0;
-        bit<32> median = 0;
+        bit<32> median1 = 0;
         bit<32> median2 = 0;
-        bit<32> median_idx = 0;
-        bit<2> odd = 0;
+        bit<32> median_idx1 = 0;
+        bit<32> median_idx2 = 0;
+
+        // get stored median index
+        counters_register.read(median_idx1, MEDIANS_IDX);
 
         if ((NODE_NUMBER & 1) == 0){
-            odd = 0;
+            // this means that the number is odd
+            median_idx2 = median_idx1;
         } else {
-            odd = 1;
+            median_idx2 = median_idx1-1;
         }
+
         // param 0
-        // get stored median index
-        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        
         // get median value
-        curr_aggregation.read(median, median_idx);
-        if (odd == 0) {
-            median_idx = median_idx-1;
-        } 
-        curr_aggregation.read(median2, median_idx);
-        acc_aggregation.write(0, median+median2);
+        // median_idx + param offset (temp_index*NODE_NUMBER)
+        curr_aggregation.read(median1, median_idx1+temp_index*NODE_NUMBER);
+        curr_aggregation.read(median2, median_idx2+temp_index*NODE_NUMBER);
+        acc_aggregation.write(temp_index, median1+median2);
 
         // param 1
-        temp_index = temp_index + NODE_NUMBER;
-        // get stored median index
-        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        temp_index = temp_index + 1;
         // get median value
-        curr_aggregation.read(median, median_idx);
-        if (odd == 0) {
-            median_idx = median_idx-1;
-        } 
-        curr_aggregation.read(median2, median_idx);
-        acc_aggregation.write(1, median+median2);
+        // median_idx + param offset (temp_index*NODE_NUMBER)
+        curr_aggregation.read(median1, median_idx1+temp_index*NODE_NUMBER);
+        curr_aggregation.read(median2, median_idx2+temp_index*NODE_NUMBER);
+        acc_aggregation.write(temp_index, median1+median2);
+
         
         // param 2
-        temp_index = temp_index + NODE_NUMBER;
-        // get stored median index
-        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
-                // get median value
-        curr_aggregation.read(median, median_idx);
-        if (odd == 0) {
-            median_idx = median_idx-1;
-        } 
-        curr_aggregation.read(median2, median_idx);
-        acc_aggregation.write(2, median+median2);
+        temp_index = temp_index + 1;
+        // get median value
+        // median_idx + param offset (temp_index*NODE_NUMBER)
+        curr_aggregation.read(median1, median_idx1+temp_index*NODE_NUMBER);
+        curr_aggregation.read(median2, median_idx2+temp_index*NODE_NUMBER);
+        acc_aggregation.write(temp_index, median1+median2);
+
 
         // param 3
-        temp_index = temp_index + NODE_NUMBER;
-        // get stored median index
-        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        temp_index = temp_index + 1;
         // get median value
-        curr_aggregation.read(median, median_idx);
-        if (odd == 0) {
-            median_idx = median_idx-1;
-        } 
-        curr_aggregation.read(median2, median_idx);
-        acc_aggregation.write(3, median+median2);
+        // median_idx + param offset (temp_index*NODE_NUMBER)
+        curr_aggregation.read(median1, median_idx1+temp_index*NODE_NUMBER);
+        curr_aggregation.read(median2, median_idx2+temp_index*NODE_NUMBER);
+        acc_aggregation.write(temp_index, median1+median2);
+
 
         // param 4
-        temp_index = temp_index + NODE_NUMBER;
-        // get stored median index
-        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        temp_index = temp_index + 1;
         // get median value
-        curr_aggregation.read(median, median_idx);
-        if (odd == 0) {
-            median_idx = median_idx-1;
-        } 
-        curr_aggregation.read(median2, median_idx);
-        acc_aggregation.write(4, median+median2);
+        // median_idx + param offset (temp_index*NODE_NUMBER)
+        curr_aggregation.read(median1, median_idx1+temp_index*NODE_NUMBER);
+        curr_aggregation.read(median2, median_idx2+temp_index*NODE_NUMBER);
+        acc_aggregation.write(temp_index, median1+median2);
+
 
 
         // param 5
-        temp_index = temp_index + NODE_NUMBER;
-        // get stored median index
-        counters_register.read(median_idx, MEDIANS_IDX + temp_index);
+        temp_index = temp_index + 1;
         // get median value
-        curr_aggregation.read(median, median_idx);
-        if (odd == 0) {
-            median_idx = median_idx-1;
-        } 
-        curr_aggregation.read(median2, median_idx);
-        acc_aggregation.write(5, median+median2);
+        // median_idx + param offset (temp_index*NODE_NUMBER)
+        curr_aggregation.read(median1, median_idx1+temp_index*NODE_NUMBER);
+        curr_aggregation.read(median2, median_idx2+temp_index*NODE_NUMBER);
+        acc_aggregation.write(temp_index, median1+median2);
+
     }
     
     action sort_parameter(in bit<32> start_index, in bit<32> parameter) {
@@ -194,21 +182,12 @@ control MyEgress(inout headers hdr,
         bit<32> current_index = start_index;
         
         curr_aggregation.read(temp_value, current_index);
-        if (node_count > 0 && temp < temp_value){
+        if (node_count > 1 && temp < temp_value){
             temp = temp_value;
             temp_value = value;
         }
         curr_aggregation.write(current_index, temp_value);
 
-
-        current_index = current_index + 1;
-        curr_aggregation.read(temp_value, current_index);
-        if (node_count > 1 && temp < temp_value){
-            temp2 = temp_value;
-            temp_value = temp;
-            temp = temp2;
-        }
-        curr_aggregation.write(current_index, temp_value);
 
         current_index = current_index + 1;
         curr_aggregation.read(temp_value, current_index);
@@ -237,14 +216,31 @@ control MyEgress(inout headers hdr,
         }
         curr_aggregation.write(current_index, temp_value);
 
-        curr_aggregation.write(start_index+node_count, temp);
+        current_index = current_index + 1;
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 5 && temp < temp_value){
+            temp2 = temp_value;
+            temp_value = temp;
+            temp = temp2;
+        }
         
-        counters_register.read(temp_value, MEDIANS_IDX+start_index);
+        current_index = current_index + 1;
+        curr_aggregation.read(temp_value, current_index);
+        if (node_count > 6 && temp < temp_value){
+            temp2 = temp_value;
+            temp_value = temp;
+            temp = temp2;
+        }
+        curr_aggregation.write(current_index, temp_value);
+
+        curr_aggregation.write(start_index+(node_count-1), temp);
+        
+        counters_register.read(temp_value, MEDIANS_IDX);
         if ((node_count*2) == NODE_NUMBER-1 || (node_count*2) == NODE_NUMBER){
             // this should be the median index
             temp_value = node_count;
         }
-        counters_register.write(MEDIANS_IDX+start_index, temp_value);
+        counters_register.write(MEDIANS_IDX, temp_value);
     }
 
     action send_aggregation() {
@@ -328,6 +324,7 @@ control MyEgress(inout headers hdr,
                 } else if (current_state == STATE_LEARNING){
                     load_counters();
                     if (current_step == hdr.agg.step){
+                        increment_node_count();
                         // sort all parameters
                         sort_parameter(0,hdr.agg.param_0);
                         sort_parameter(NODE_NUMBER,hdr.agg.param_1);
@@ -335,7 +332,6 @@ control MyEgress(inout headers hdr,
                         sort_parameter(3*NODE_NUMBER,hdr.agg.param_3);
                         sort_parameter(4*NODE_NUMBER,hdr.agg.param_4);
                         sort_parameter(5*NODE_NUMBER,hdr.agg.param_5);
-                        increment_node_count();
                         send_aggregation();
 
                         if (node_count >= NODE_NUMBER){

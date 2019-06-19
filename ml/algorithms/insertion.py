@@ -57,12 +57,14 @@ def insertion_sort(values):
             register[current_index] = temp_value
 
             current_index += 1
+            temp_value = register[current_index]
             if counter > 4 and temp < temp_value:
                 temp2 = temp_value
                 temp_value = temp
                 temp = temp2
             register[current_index] = temp_value
-  
+
+            
             register[counter] = temp
 
             if counter*2 == NUM_NODES-1 or counter*2 == NUM_NODES:
