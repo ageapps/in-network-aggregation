@@ -20,19 +20,20 @@ HOST = '127.0.0.1'
 PORT = 12344
 UDP_CLIENT = True
 scale_factor = 1
+bizantine_factor = 1
 worker_number = 1
 client = None
 MAX_TRIES = 20
 
 def scale_up(elements, factor):
     for i, e in enumerate(elements):
-        elements[i] = round(e*factor)
+        elements[i] = round(e*factor*bizantine_factor)
     return elements
 
 
 def scale_down(elements, factor):
     for i, e in enumerate(elements):
-        elements[i] = e / (factor*worker_number)
+        elements[i] = e / (factor*worker_number*bizantine_factor)
     return elements
 
 
@@ -126,9 +127,7 @@ def on_params_update(update_params, step):
 
 
 def main():
-    global scale_factor
-    global worker_number
-    global client
+    global scale_factor, bizantine_factor, worker_number, client
     current_state = STATE_SETUP
     host = HOST
     port = PORT
@@ -142,6 +141,9 @@ def main():
 
     if len(sys.argv) > 2:
         port = int(sys.argv[2])
+
+    if len(sys.argv) > 3:
+        bizantine_factor = int(sys.argv[3])
     
 
 
@@ -185,10 +187,16 @@ def main():
         output_classes = new_parameters[4]
         scale_factor = new_parameters[5]
         eta = eta / scale_factor
-        print('Parameters | iterations: {} | eta: {} | in: {} | feat: {} | out: {} | scale: {} | workers: {}'.format(
+        print('Parameters | iterations: {} | eta: {} | n: {} | in: {} | out: {} | scale: {} | workers: {}'.format(
             iterations, eta, input_size, input_features, output_classes, scale_factor, worker_number))
     else:
         raise Exception('Error with initial parameters')
+
+    if (bizantine_factor > 1):
+        print("++++++++++++++++++++++++++")
+        print("THIS IS A BIZANTINE WORKER")
+        print("BIZANTINE FACTOR - " + str(bizantine_factor))
+        print("++++++++++++++++++++++++++")
 
     x, y = generate_data(input_size, output_classes)
     X = standardize(x)

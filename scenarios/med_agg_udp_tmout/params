@@ -1,6 +1,6 @@
 
 // Learning parameters
-const bit<32> NODE_NUMBER = 3;
+const bit<32> NODE_NUMBER = 5;
 const bit<32> ITERATIONS = 50;
 const bit<32> ETA = 1;
 const bit<32> INPUT_SIZE  = 200;

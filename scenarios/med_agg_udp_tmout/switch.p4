@@ -174,7 +174,7 @@ control MyEgress(inout headers hdr,
         acc_aggregation.write(temp_index, median1+median2);
 
     }
-    
+
     action sort_parameter(in bit<32> start_index, in bit<32> parameter) {
         bit<32> value = parameter;
         bit<32> temp = parameter;
@@ -312,44 +312,50 @@ control MyEgress(inout headers hdr,
         if (hdr.agg.isValid()){
             load_state();
             if (hdr.agg.state == current_state) {
-                load_counters();
                 if (current_state == STATE_SETUP){
                     // TODO: check not duplicate nodes
-                    send_parameters();
-                    increment_node_count();
-                    if (node_count == NODE_NUMBER){
-                        update_node_count(0);
-                        update_state(STATE_LEARNING);
-                    } 
-                } else if (current_state == STATE_LEARNING){
-                    load_counters();
-                    if (current_step == hdr.agg.step){
+                    @atomic {
+                        load_counters();
+                        send_parameters();
                         increment_node_count();
-                        // sort all parameters
-                        sort_parameter(0,hdr.agg.param_0);
-                        sort_parameter(NODE_NUMBER,hdr.agg.param_1);
-                        sort_parameter(2*NODE_NUMBER,hdr.agg.param_2);
-                        sort_parameter(3*NODE_NUMBER,hdr.agg.param_3);
-                        sort_parameter(4*NODE_NUMBER,hdr.agg.param_4);
-                        sort_parameter(5*NODE_NUMBER,hdr.agg.param_5);
-                        send_aggregation();
-
-                        if (node_count >= NODE_NUMBER){
-                            update_aggregation();
+                        if (node_count == NODE_NUMBER){
                             update_node_count(0);
-                            increment_step();
-                            if (current_step >= ITERATIONS){
-                                update_state(STATE_FINISHED);
+                            update_state(STATE_LEARNING);
+                        } 
+                    }
+                } else if (current_state == STATE_LEARNING){
+                    @atomic {
+                        load_counters();
+                        if (current_step == hdr.agg.step){
+                            increment_node_count();
+                            // sort all parameters
+                            sort_parameter(0,hdr.agg.param_0);
+                            sort_parameter(NODE_NUMBER,hdr.agg.param_1);
+                            sort_parameter(2*NODE_NUMBER,hdr.agg.param_2);
+                            sort_parameter(3*NODE_NUMBER,hdr.agg.param_3);
+                            sort_parameter(4*NODE_NUMBER,hdr.agg.param_4);
+                            sort_parameter(5*NODE_NUMBER,hdr.agg.param_5);
+                            send_aggregation();
+
+                            if (node_count >= NODE_NUMBER){
+                                update_aggregation();
+                                update_node_count(0);
+                                increment_step();
+                                if (current_step >= ITERATIONS){
+                                    update_state(STATE_FINISHED);
+                                }
                             }
+                        } else {
+                            hdr.agg.step = current_step;
+                            send_error(STATE_WRONG_STEP);
                         }
-                    } else {
-                        hdr.agg.step = current_step;
-                        send_error(STATE_WRONG_STEP);
                     }
                 } else if (current_state == STATE_FINISHED){
-                    load_counters();
-                    // state is finished, send state
-                    send_current_state();
+                    @atomic {
+                        load_counters();
+                        // state is finished, send state
+                        send_current_state();
+                    }
                 } else {
                     send_error(STATE_ERROR);
                 }
@@ -363,9 +369,11 @@ control MyEgress(inout headers hdr,
                         update_node_count(0);
                     } 
                 }
-                load_counters();
-                // state is wrong, answer with current state
-                send_current_state();
+                @atomic {
+                    load_counters();
+                    // state is wrong, answer with current state
+                    send_current_state();
+                }
             }
         }
     }

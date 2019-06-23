@@ -222,8 +222,6 @@ control MyEgress(inout headers hdr,
                     @atomic {
                         load_counters();
                         send_parameters();
-                    }
-                    @atomic {
                         increment_node_count();
                         if (node_count == NODE_NUMBER){
                             update_node_count(0);
