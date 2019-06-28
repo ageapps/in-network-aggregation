@@ -4,9 +4,14 @@
 
 #define ENABLE_DEBUG_TABLES
 
+#include "../includes/header.p4"
+#include "../includes/parser.p4"
+#include "../includes/ip_forward.p4"
+#include "../includes/debug.p4"
+
 // Learning parameters
-const bit<32> NODE_NUMBER = 3;
-const bit<32> ITERATIONS = 50;
+const bit<32> NODE_NUMBER = 5;
+const bit<32> ITERATIONS = 100;
 const bit<32> ETA = 1;
 const bit<32> INPUT_SIZE  = 200;
 const bit<32> INPUT_FEATURES  = 1;
@@ -14,12 +19,7 @@ const bit<32> OUTPUT_CLASSES  = 1;
 const bit<32> SCALE_FACTOR  = 1000;
 const bit<16> MCAST_GROUP  = 1;
 
-
-#include "includes/header.p4"
-#include "includes/parser.p4"
-#include "includes/ip_forward.p4"
-#include "includes/debug.p4"
-#include "includes/params.p4"
+#include "includes/constants.p4"
 #include "includes/aggregation.p4"
 
 

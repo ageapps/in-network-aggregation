@@ -1,3 +1,5 @@
+#ifndef _DEBUG_P4_
+#define _DEBUG_P4_
 
 action _nop() {
 }
@@ -51,3 +53,4 @@ control DebugEgress(inout headers hdr,
 
 }
 
+#endif

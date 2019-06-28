@@ -1,3 +1,5 @@
+#ifndef _IP_FORWARD_P4_
+#define _IP_FORWARD_P4_
 
 control IPForward(inout headers hdr, inout standard_metadata_t standard_metadata){
 
@@ -30,3 +32,5 @@ control IPForward(inout headers hdr, inout standard_metadata_t standard_metadata
     }
 
 }
+
+#endif

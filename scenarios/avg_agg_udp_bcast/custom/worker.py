@@ -15,6 +15,8 @@ PORT = 12344
 def generate_data(input_size, output_classes):
     X = 2 * np.random.rand(input_size, output_classes)
     Y = 4 + 3*X+np.random.randn(input_size, output_classes)
+    # X = standardize(X)
+    # Y = standardize(Y)
     return X, Y
 
 def main():
@@ -35,7 +37,7 @@ def main():
     if len(sys.argv) > 3:
         bizantine_factor = int(sys.argv[3])
 
-    worker = Worker(PORT, HOST, worker_name, bizantine_factor, median=False)
+    worker = Worker(port, host, worker_name, bizantine_factor, median=False)
     worker.run(generate_data)
 
 

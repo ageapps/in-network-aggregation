@@ -1,13 +1,15 @@
 /*************************************************************************
 ************  A G G R E G A T I O N   P R O C E S S I N G   **************
 *************************************************************************/
-control Aggregation(inout headers hdr, inout bit<2> result) {
+control Aggregation(inout headers hdr) {
 
     register<bit<32>>(PARAM_NUMBER) curr_aggregation;
     // aggregated gradients from step-1
     register<bit<32>>(PARAM_NUMBER) acc_aggregation;
+    
     // register that holds counters of nodes, step, and state
     register<bit<32>>(MAX_COUNTERS) counters_register;
+
 
     bit<32> current_step;
     bit<8> current_state;
@@ -115,7 +117,6 @@ control Aggregation(inout headers hdr, inout bit<2> result) {
     action increment_step() {
         counters_register.read(temp_value, STEP_IDX);
         counters_register.write(STEP_IDX, temp_value+1);
-        counters_register.read(current_step, STEP_IDX);
     }
 
     action update_node_count(in bit<32> count) {
@@ -128,66 +129,64 @@ control Aggregation(inout headers hdr, inout bit<2> result) {
     }
 
     apply {
-        load_state();
-        if (current_state == hdr.agg.state) {
-            if (current_state == STATE_SETUP){
-                // TODO: check not duplicate nodes
-                @atomic {
-                    load_counters();
-                    send_parameters();
-                    increment_node_count();
-                    if (node_count == NODE_NUMBER){
-                        update_node_count(0);
-                        update_state(STATE_LEARNING);
-                    }
-                }
-            } else if (current_state == STATE_LEARNING){
-                @atomic {
-                    load_counters();
-                    if (current_step == hdr.agg.step){
-                        aggregate();
+        if (hdr.agg.isValid()){
+            load_state();
+            if (current_state == hdr.agg.state) {
+                if (current_state == STATE_SETUP){
+                    // TODO: check not duplicate nodes
+                    @atomic {
+                        load_counters();
+                        send_parameters();
                         increment_node_count();
-                        if (node_count >= NODE_NUMBER){
-                            update_aggregation();
-                            send_aggregation();
+                        if (node_count == NODE_NUMBER){
                             update_node_count(0);
-                            increment_step();
-                            if (current_step >= ITERATIONS){
-                                update_state(STATE_FINISHED);
-                            }
-                            result = RESULT_MCAST;
-                        } else {
-                            // still aggregating, drop it
-                            result = RESULT_DROP;
+                            update_state(STATE_LEARNING);
                         }
-                    } else {
-                        hdr.agg.step = current_step;
-                        send_error(STATE_WRONG_STEP);
                     }
-                }
-            } else if (current_state == STATE_FINISHED){
-                @atomic {
-                    load_counters();
-                    // state is finished, send state
-                    send_current_state();
+                } else if (current_state == STATE_LEARNING){
+                    @atomic {
+                        load_counters();
+                        if (current_step == hdr.agg.step){
+                            aggregate();
+                            increment_node_count();
+                            send_aggregation();
+                            if (node_count >= NODE_NUMBER){
+                                update_aggregation();
+                                update_node_count(0);
+                                increment_step();
+                                if (current_step >= ITERATIONS){
+                                    update_state(STATE_FINISHED);
+                                }
+                            }
+                        } else {
+                            hdr.agg.step = current_step;
+                            send_error(STATE_WRONG_STEP);
+                        }
+                    }
+                } else if (current_state == STATE_FINISHED){
+                    @atomic {
+                        load_counters();
+                        // state is finished, send state
+                        send_current_state();
+                    }
+                } else {
+                    send_error(STATE_ERROR);
                 }
             } else {
-                send_error(STATE_ERROR);
-            }
-        } else {
-            // if finished and another worker asks to start, back to initial
-            if (current_state == STATE_FINISHED){
-                if (hdr.agg.state == STATE_SETUP){
-                    update_state(STATE_SETUP);
-                    update_step(0);
-                    update_aggregation();
-                    update_node_count(0);
-                } 
-            }
-            @atomic {
-                load_counters();
-                // state is wrong, answer with current state
-                send_current_state();
+                // if finished and another worker asks to start, back to initial
+                if (current_state == STATE_FINISHED){
+                    if (hdr.agg.state == STATE_SETUP){
+                        update_state(STATE_SETUP);
+                        update_step(0);
+                        update_aggregation();
+                        update_node_count(0);
+                    } 
+                }
+                @atomic {
+                    load_counters();
+                    // state is wrong, answer with current state
+                    send_current_state();
+                }
             }
         }
     }

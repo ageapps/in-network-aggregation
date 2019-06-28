@@ -35,7 +35,7 @@ def main():
     if len(sys.argv) > 3:
         bizantine_factor = int(sys.argv[3])
 
-    worker = Worker(PORT, HOST, worker_name, bizantine_factor, median=False)
+    worker = Worker(port, host, worker_name, bizantine_factor, median=False)
     worker.run(generate_data)
 
 

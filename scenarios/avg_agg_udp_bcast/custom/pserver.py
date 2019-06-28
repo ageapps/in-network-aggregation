@@ -38,7 +38,7 @@ def main():
     if len(sys.argv) > 2:
         port = int(sys.argv[2])
 
-    pserver = PServer(PORT, HOST)
+    pserver = PServer(port, HOST)
     pserver.run(worker_num,learning_parameters, bcast=True)
     
 
