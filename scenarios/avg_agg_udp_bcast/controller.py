@@ -28,7 +28,7 @@ def main():
             (read_register("MyIngress.aggregation.counters_register", 1), 
             read_register("MyIngress.aggregation.counters_register", 2),
             read_register("MyIngress.aggregation.counters_register", 3))
-            print 'Acc : %s' % (read_register("MyIngress.aggregation.acc_aggregation",-1))
+            print 'W : %s' % (read_register("MyIngress.aggregation.acc_aggregation",-1))
 
     except KeyboardInterrupt:
         print " Shutting down."

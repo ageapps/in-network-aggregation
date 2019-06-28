@@ -39,7 +39,7 @@ def main():
         port = int(sys.argv[2])
 
     pserver = PServer(PORT, HOST)
-    pserver.run(worker_num,learning_parameters, bcast=False)
+    pserver.run(worker_num,learning_parameters, bcast=True)
     
 
 if __name__ == '__main__':
