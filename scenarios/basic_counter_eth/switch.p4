@@ -5,12 +5,7 @@
 #include "includes/header.p4"
 #include "includes/parser.p4"
 
-const bit<32> MAX_COUNTER_VALUE = 1 << 16;
-
-// enu1ALUE_A = 1,
-//     VALUE_B = 2,
-//     VALUE_C = 3
-// } 
+const bit<32> MAX_COUNTER_VALUES = 2;
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -22,22 +17,33 @@ control MyIngress(inout headers hdr,
     action drop() {
         mark_to_drop();
     }
-    /**
-    *   Use enumns
-        Use atomic anotation
-        int type
-        functions with return statemnt
-
-    */
-    action broadcast() {
-        standard_metadata.mcast_grp = 1;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+    
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        meta.index = (bit<32>)standard_metadata.ingress_port;
+        // meta.index = (bit<32>)((bit<16>)hdr.ipv4.dstAddr);
+    }
+    
+    table ipv4_lpm {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            ipv4_forward;
+            drop;
+            NoAction;
+        }
+        size = 1024;
+        default_action = drop();
     }
 
     apply {
 
         if (hdr.ipv4.isValid()) {
-            broadcast();
+            ipv4_lpm.apply();
         }
     }
 }
@@ -51,7 +57,7 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
     
     // Declarations
-    register<bit<32>>(MAX_COUNTER_VALUE) packetCounter;
+    register<bit<32>>(MAX_COUNTER_VALUES) packetCounter;
     bit<32> tmp;
 
     action setCounter() {
@@ -59,21 +65,16 @@ control MyEgress(inout headers hdr,
         hdr.pcounter.count = 0;
         hdr.pcounter.pid = hdr.ethernet.etherType;
         hdr.ethernet.etherType = TYPE_pcounter;
-        packetCounter.write( meta.index, 0);
-
     }
-    
     action addCounter() {
-        // hdr.pcounter.count = hdr.pcounter.count + 1;
-        // get register myCount
-        packetCounter.read( tmp, meta.index);        
-        // add myCount header
-        hdr.pcounter.count = tmp+1;
-        // sum to the register
-        packetCounter.write(meta.index, tmp+1);
-
-        if (hdr.pcounter.count > 10){
-            hdr.pcounter.count = 0;
+        @atomic {
+            // hdr.pcounter.count = hdr.pcounter.count + 1;
+            // get register myCount
+            packetCounter.read( tmp, meta.index);        
+            // add myCount header
+            hdr.pcounter.count = tmp+1;
+            // sum to the register
+            packetCounter.write(meta.index, tmp+1);
         }
     }
 
@@ -81,10 +82,8 @@ control MyEgress(inout headers hdr,
          if (hdr.ipv4.isValid()){
             if (!hdr.pcounter.isValid()){
                 setCounter();
-            } 
-            if (hdr.pcounter.isValid()) {
-                addCounter();
-            }
+            }                 
+            addCounter();
          }
      }
 }

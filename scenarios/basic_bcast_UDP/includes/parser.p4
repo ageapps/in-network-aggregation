@@ -1,18 +1,19 @@
 #ifndef _PARSER_P4_
 #define _PARSER_P4_
 
-// switch udp port to receive aggregated traffic
-const bit<16> AGGREGATION_PORT = 1234;
-const bit<16> TYPE_IPV4 = 0x0800;
 const bit<8>  IP_PROT_UDP  = 0x11;
+const bit<16> TYPE_IPV4 = 0x0800;
 
-struct metadata {}
+struct metadata {
+    bit<32> index;
+}
 
 
 /*************************************************************************
 *********************** P A R S E R  ***********************************
 *************************************************************************/
 
+// TODO: Update the parser to parse the pcounter header as well
 parser MyParser(packet_in packet,
                 out headers hdr,
                 inout metadata meta,
@@ -25,8 +26,8 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            TYPE_IPV4: parse_ipv4;
-            default: accept;
+            TYPE_IPV4 : parse_ipv4;
+            default : accept;
         }
     }
 
@@ -40,17 +41,8 @@ parser MyParser(packet_in packet,
 
     state parse_udp {
         packet.extract(hdr.udp);
-        transition select(hdr.udp.dstPort) {
-            AGGREGATION_PORT: parse_agg;
-            default : accept;
-        }
-    }
-
-    state parse_agg {
-        packet.extract(hdr.agg);
         transition accept;
     }
-
 }
 
 /*************************************************************************
@@ -60,6 +52,7 @@ parser MyParser(packet_in packet,
 control MyVerifyChecksum(inout headers hdr, inout metadata meta) {   
     apply {  }
 }
+
 
 /*************************************************************************
 *************   C H E C K S U M    C O M P U T A T I O N   **************
@@ -89,13 +82,11 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
-
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.udp);
-        packet.emit(hdr.agg);
     }
 }
 

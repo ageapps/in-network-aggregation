@@ -1,0 +1,40 @@
+{
+  "target": "bmv2",
+  "p4info": "build/switch.p4info",
+  "bmv2_json": "build/switch.json",
+  "table_entries": [
+    {
+      "table": "MyEgress.send_answer",
+      "match": {
+        "standard_metadata.egress_port": [1]
+      },
+      "action_name": "MyEgress.set_values",
+      "action_params": {
+        "dstMac": "00:00:00:00:01:01",
+        "dstIp": "10.0.1.1"
+      }
+    },
+    {
+      "table": "MyEgress.send_answer",
+      "match": {
+        "standard_metadata.egress_port": [2]
+      },
+      "action_name": "MyEgress.set_values",
+      "action_params": {
+        "dstMac": "00:00:00:00:01:02",
+        "dstIp": "10.0.2.2"
+      }
+    },
+    {
+      "table": "MyEgress.send_answer",
+      "match": {
+        "standard_metadata.egress_port": [3]
+      },
+      "action_name": "MyEgress.set_values",
+      "action_params": {
+        "dstMac": "00:00:00:00:01:03",
+        "dstIp": "10.0.3.3"
+      }
+    }
+  ]
+}

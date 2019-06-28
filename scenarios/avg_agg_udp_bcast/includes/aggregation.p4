@@ -1,99 +1,14 @@
-/* -*- P4_16 -*- */
-#include <core.p4>
-#include <v1model.p4>
-
-#include "header"
-#include "parser"
-#include "params"
-
-const bit<32> MAX_COUNTERS = ((1 << 20) - 1);
-
-const bit<32> PARAM_NUMBER = 5;
-
-// state messages
-const bit<8> STATE_SETUP = 0;
-const bit<8> STATE_LEARNING = 1;
-const bit<8> STATE_FINISHED = 2;
-const bit<8> STATE_ERROR = 3;
-const bit<8> STATE_WRONG_STEP = 4;
-
-const bit<32> NODES_IDX = 0x2;
-const bit<32> STEP_IDX = 0x3;
-const bit<32> STATE_IDX = 0x4;
-
 /*************************************************************************
-**************  I N G R E S S   P R O C E S S I N G   *******************
+************  A G G R E G A T I O N   P R O C E S S I N G   **************
 *************************************************************************/
+control Aggregation(inout headers hdr, inout bit<2> result) {
 
-control MyIngress(inout headers hdr,
-                 inout metadata meta,
-                 inout standard_metadata_t standard_metadata) {
 
-    action drop() {
-        mark_to_drop();
-    }
-    
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-        standard_metadata.egress_spec = port;
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = dstAddr;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-    }
-    
-    table ipv4_lpm {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            ipv4_forward;
-            drop;
-            NoAction;
-        }
-        size = 1024;
-        default_action = drop();
-    }
-
-    action send_answer() {
-        standard_metadata.egress_spec = standard_metadata.ingress_port;
-        macAddr_t tmp_mac = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
-        hdr.ethernet.srcAddr = tmp_mac;
-
-        ip4Addr_t tmp_ip = hdr.ipv4.srcAddr;
-        hdr.ipv4.srcAddr = hdr.ipv4.dstAddr;
-        hdr.ipv4.dstAddr = tmp_ip;
-        
-        hdr.udp.dstPort = hdr.udp.srcPort;
-        hdr.udp.srcPort = UDP_PORT;
-        hdr.udp.checksum = 0;
-    }
-
-    apply {
-        if (hdr.agg.isValid()) {
-            send_answer();
-        } else{
-            if (hdr.ipv4.isValid()){
-                ipv4_lpm.apply();
-            }
-        }
-     }
-}
-
-/*************************************************************************
-****************  E G R E S S   P R O C E S S I N G   *******************
-*************************************************************************/
-
-control MyEgress(inout headers hdr,
-                  inout metadata meta,
-                  inout standard_metadata_t standard_metadata) {
-    
     register<bit<32>>(PARAM_NUMBER) curr_aggregation;
     // aggregated gradients from step-1
     register<bit<32>>(PARAM_NUMBER) acc_aggregation;
-    
     // register that holds counters of nodes, step, and state
     register<bit<32>>(MAX_COUNTERS) counters_register;
-
 
     bit<32> current_step;
     bit<8> current_state;
@@ -148,21 +63,7 @@ control MyEgress(inout headers hdr,
         acc_aggregation.write(5, temp_value);
     }
 
-    action send_ack() {
-        hdr.agg.step = current_step;
-        hdr.agg.node_count = (bit<8>)node_count;
-        hdr.agg.param_0 = 0;
-        hdr.agg.param_1 = 0;
-        hdr.agg.param_2 = 0;
-        hdr.agg.param_3 = 0;
-        hdr.agg.param_4 = 0;
-        hdr.agg.param_5 = 0;
-    }
-
-    action send_bcast() {
-        standard_metadata.mcast_grp = 1;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-
+    action bcast_aggregation() {
         hdr.agg.step = current_step;
         hdr.agg.node_count = (bit<8>)node_count;
         acc_aggregation.read(hdr.agg.param_0, 0);
@@ -228,72 +129,67 @@ control MyEgress(inout headers hdr,
     }
 
     apply {
-        if (hdr.agg.isValid()){
-            load_state();
-            if (hdr.agg.state == current_state) {
-                load_counters();
-                if (current_state == STATE_SETUP){
-                    // TODO: check not duplicate nodes
+        load_state();
+        if (current_state == hdr.agg.state) {
+            if (current_state == STATE_SETUP){
+                // TODO: check not duplicate nodes
+                @atomic {
+                    load_counters();
                     send_parameters();
                     increment_node_count();
                     if (node_count == NODE_NUMBER){
                         update_node_count(0);
                         update_state(STATE_LEARNING);
-                    } 
-                } else if (current_state == STATE_LEARNING){
+                    }
+                }
+            } else if (current_state == STATE_LEARNING){
+                @atomic {
                     load_counters();
                     if (current_step == hdr.agg.step){
                         aggregate();
                         increment_node_count();
                         if (node_count >= NODE_NUMBER){
                             update_aggregation();
+                            bcast_aggregation();
                             update_node_count(0);
                             increment_step();
                             if (current_step >= ITERATIONS){
                                 update_state(STATE_FINISHED);
                             }
-                            send_bcast();
+                            result = RESULT_MCAST;
                         } else {
-                            send_ack();
+                            // still aggregating, drop it
+                            result = RESULT_DROP;
                         }
                     } else {
                         hdr.agg.step = current_step;
                         send_error(STATE_WRONG_STEP);
                     }
-                } else if (current_state == STATE_FINISHED){
+                }
+            } else if (current_state == STATE_FINISHED){
+                @atomic {
                     load_counters();
                     // state is finished, send state
                     send_current_state();
-                } else {
-                    send_error(STATE_ERROR);
                 }
             } else {
-                // if finished and another worker asks to start, back to initial
-                if (current_state == STATE_FINISHED){
-                    if (hdr.agg.state == STATE_SETUP){
-                        update_state(STATE_SETUP);
-                        update_step(0);
-                        update_aggregation();
-                        update_node_count(0);
-                    } 
-                }
+                send_error(STATE_ERROR);
+            }
+        } else {
+            // if finished and another worker asks to start, back to initial
+            if (current_state == STATE_FINISHED){
+                if (hdr.agg.state == STATE_SETUP){
+                    update_state(STATE_SETUP);
+                    update_step(0);
+                    update_aggregation();
+                    update_node_count(0);
+                } 
+            }
+            @atomic {
                 load_counters();
                 // state is wrong, answer with current state
                 send_current_state();
             }
         }
     }
-
-
-/*************************************************************************
-***********************  S W I T C H  *******************************
-*************************************************************************/
-
-V1Switch(
-MyParser(),
-MyVerifyChecksum(),
-MyIngress(),
-MyEgress(),
-MyComputeChecksum(),
-MyDeparser()
-) main;
+}

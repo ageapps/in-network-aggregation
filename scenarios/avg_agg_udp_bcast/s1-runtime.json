@@ -1,36 +1,36 @@
 {
   "target": "bmv2",
-  "p4info": "build/avg_agg_udp_bcast.p4info",
-  "bmv2_json": "build/avg_agg_udp_bcast.json",
+  "p4info": "build/switch.p4info",
+  "bmv2_json": "build/switch.json",
   "table_entries": [
     {
-      "table": "MyIngress.ipv4_lpm",
+      "table": "MyIngress.ip_forward.ipv4_lpm",
       "match": {
         "hdr.ipv4.dstAddr": ["10.0.1.1", 32]
       },
-      "action_name": "MyIngress.ipv4_forward",
+      "action_name": "MyIngress.ip_forward.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:00:01:01",
         "port": 1
       }
     },
     {
-      "table": "MyIngress.ipv4_lpm",
+      "table": "MyIngress.ip_forward.ipv4_lpm",
       "match": {
         "hdr.ipv4.dstAddr": ["10.0.2.2", 32]
       },
-      "action_name": "MyIngress.ipv4_forward",
+      "action_name": "MyIngress.ip_forward.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:00:01:02",
         "port": 2
       }
     },
     {
-      "table": "MyIngress.ipv4_lpm",
+      "table": "MyIngress.ip_forward.ipv4_lpm",
       "match": {
         "hdr.ipv4.dstAddr": ["10.0.3.3", 32]
       },
-      "action_name": "MyIngress.ipv4_forward",
+      "action_name": "MyIngress.ip_forward.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:00:01:03",
         "port": 3

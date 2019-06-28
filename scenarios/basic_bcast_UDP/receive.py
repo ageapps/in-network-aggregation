@@ -8,6 +8,7 @@ from scapy.all import Packet, IPOption
 from scapy.all import ShortField, IntField, LongField, BitField, FieldListField, FieldLenField
 from scapy.all import IP, TCP, UDP, Raw
 from scapy.layers.inet import _IPOption_HDR
+from pcounter_header import PCounter
 
 def get_if():
     ifs=get_if_list()
@@ -22,7 +23,7 @@ def get_if():
     return iface
 
 def handle_pkt(pkt):
-    if (UDP in pkt):
+    if PCounter in pkt or (UDP in pkt):
         print "got a packet"
         pkt.show2()
 #        hexdump(pkt)

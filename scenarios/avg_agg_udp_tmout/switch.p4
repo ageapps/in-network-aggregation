@@ -201,7 +201,6 @@ control MyEgress(inout headers hdr,
     action increment_step() {
         counters_register.read(temp_value, STEP_IDX);
         counters_register.write(STEP_IDX, temp_value+1);
-        //counters_register.read(current_step, STEP_IDX);
     }
 
     action update_node_count(in bit<32> count) {
