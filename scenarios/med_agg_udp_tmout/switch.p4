@@ -8,18 +8,19 @@
 #include "../includes/parser.p4"
 #include "../includes/ip_forward.p4"
 #include "../includes/debug.p4"
+#include "../includes/constants.p4"
 
 // Learning parameters
-const bit<32> NODE_NUMBER = 5;
-const bit<32> ITERATIONS = 50;
-const bit<32> ETA = 1;
-const bit<32> INPUT_SIZE  = 200;
-const bit<32> INPUT_FEATURES  = 1;
-const bit<32> OUTPUT_CLASSES  = 1;
-const bit<32> SCALE_FACTOR  = 1000;
+const bit<32> DEFAULT_NODE_NUMBER = 5;
+const bit<32> DEFAULT_ITERATIONS = 100;
+const bit<32> DEFAULT_ETA = 1;
+const bit<32> DEFAULT_INPUT_SIZE  = 200;
+const bit<32> DEFAULT_INPUT_FEATURES  = 1;
+const bit<32> DEFAULT_OUTPUT_CLASSES  = 1;
+const bit<32> DEFAULT_SCALE_FACTOR  = 1000;
+
 const bit<16> MCAST_GROUP  = 1;
 
-#include "includes/constants.p4"
 #include "includes/aggregation.p4"
 
 /*************************************************************************

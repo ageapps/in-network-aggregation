@@ -36,7 +36,12 @@ def main():
         bizantine_factor = int(sys.argv[3])
 
     worker = Worker(port, host, worker_name, bizantine_factor, median=True)
-    worker.run(generate_data)
+    try:
+        while True:
+            worker.run(generate_data)
+            print('Worker finished learning process')
+    except KeyboardInterrupt:
+        print('Stopping worker...')
 
 
 if __name__ == '__main__':

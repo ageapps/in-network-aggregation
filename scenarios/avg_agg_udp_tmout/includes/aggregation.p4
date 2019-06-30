@@ -143,7 +143,7 @@ control Aggregation(inout headers hdr) {
         current_state = (bit<8>)temp_value;
     }
 
-     action configure_parameters() {
+    action configure_parameters() {
         NODE_NUMBER = (bit<32>)hdr.agg.node_count;
         parameter_register.write(NODE_NUMBER_IDX, NODE_NUMBER);
 

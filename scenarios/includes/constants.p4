@@ -23,6 +23,7 @@ const bit<8> STATE_CONFIGURE = 6;
 const bit<32> NODES_IDX = 2;
 const bit<32> STEP_IDX = 3;
 const bit<32> STATE_IDX = 4;
+const bit<32> MEDIANS_IDX = 5;
 
 // Parameter indexes
 const bit<32> NODE_NUMBER_IDX = 0;
