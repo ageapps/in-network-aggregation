@@ -32,7 +32,7 @@ OUTPUT_CLASSES_IDX = 5
 SCALE_FACTOR_IDX = 6
 
 # parameter values
-worker_number = 2
+worker_number = 5
 iterations = 50
 eta = 0.001
 input_size = 200
@@ -40,31 +40,6 @@ input_features = 1
 output_classes = 1
 scale_factor = 1000
 
-def setup_mcast(mcast_id, ports, thrift_port=9090, sw=None):
-        if sw: thrift_port = sw.thrift_port
-        p = subprocess.Popen(['simple_switch_CLI', '--thrift-port', str(thrift_port)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        entries = []
-        s = "mc_mgrp_create %d" % (mcast_id)
-        entries.append(s)
-        for port in range(1, ports+1):
-            s = "mc_node_create %d00 %d" % (port, port)
-            entries.append(s)
-            s = "mc_node_associate %d %d" % (mcast_id, port-1)
-            entries.append(s)
-        
-        stdout, stderr = p.communicate(input='\n'.join(entries))
-    
-        if stderr:
-            print "Error: " + str(stderr)
-
-        print stdout
-
-       
-def mc_dump(thrift_port=9090, sw=None):
-    p = subprocess.Popen(['simple_switch_CLI', '--thrift-port', str(thrift_port)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = p.communicate(input="mc_dump")
-    print stdout
 
 def read_register(register, idx=-1, thrift_port=9090, sw=None):
     if sw: thrift_port = sw.thrift_port
@@ -116,14 +91,8 @@ def configure_learning():
 
 def main():
 
-    ports = 5
-
-    if len(sys.argv) > 1:
-        ports = int(sys.argv[1])
-
-    try:    
-        setup_mcast(1, ports)
-        mc_dump()
+    
+    try:
         reset_learning()
         configure_learning()
         while True:

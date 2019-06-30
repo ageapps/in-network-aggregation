@@ -1,9 +1,9 @@
 import struct
 import re
 
-STATE_SETUP = 0
-STATE_LEARNING = 1
-STATE_FINISHED = 2
+STATE_FINISHED = 0
+STATE_SETUP = 1
+STATE_LEARNING = 2
 STATE_ERROR = 3
 STATE_WRONG_STEP = 4
 # this state is only used by workers

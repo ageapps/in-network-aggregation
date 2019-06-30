@@ -133,10 +133,16 @@ class Worker(object):
         new_parameters = []
         register_request = self.get_formated_message(current_state, 0, new_parameters)
         answer = None
-        for i in range(5):
+        failed = 0
+        while True:
+
             try:
                 answer = self.client.send_message(register_request, wait_answer=True)
             except socket.timeout:
+                if failed >= MAX_TRIES:
+                    raise Exception('Error on setup | message:{}'.format(answer))
+
+                failed += 1
                 print('Timeout {} | trying it again...'.format(i))
                 continue
 
@@ -154,15 +160,16 @@ class Worker(object):
                 print('Worker successfully registered')
                 break
             elif state == STATE_FINISHED:
-                print('Starting setup again')
-                continue
+                print('No learing process available')
+                time.sleep(2)
             else :
-                raise Exception('Error on setup | message:{}'.format(answer))
+                print('Worker waiting')
+                time.sleep(2)
 
         if answer is None:
             print('Not able to contact server in {}:{}'.format(self.host,self.port))
             exit(0)
-
+        print('State in answer: {}'.format(state))
         if len(new_parameters) > 0 and state == current_state:
             iterations = new_parameters[0]
             eta = new_parameters[1]
@@ -170,9 +177,9 @@ class Worker(object):
             input_features = new_parameters[3]
             output_classes = new_parameters[4]
             self.scale_factor = new_parameters[5]
-            eta = eta / self.scale_factor
             print('Parameters | iterations: {} | eta: {} | n: {} | in: {} | out: {} | scale: {} | workers: {}'.format(
                 iterations, eta, input_size, input_features, output_classes, self.scale_factor, worker_number))
+            eta = eta / self.scale_factor
         else:
             raise Exception('Error with initial parameters')
 
@@ -189,7 +196,7 @@ class Worker(object):
 
         current_state = STATE_WAITING
         while True:
-            print('Waiting to start learning')
+            print('Waiting for other workers to start learning')
             answer = self.client.send_message(
                 self.get_formated_message(current_state, 0, []), wait_answer=True)
             state = answer[0]
