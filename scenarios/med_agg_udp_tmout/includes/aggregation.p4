@@ -294,7 +294,7 @@ control Aggregation(inout headers hdr) {
     apply {
         if (hdr.agg.state == STATE_RESET){
             @atomic {
-                current_state = STATE_FINISHED;
+                current_state = STATE_WAITING;
                 current_step = 0;
                 node_count = 0;
                 
@@ -347,7 +347,7 @@ control Aggregation(inout headers hdr) {
                                 update_node_count(0);
                                 increment_step();
                                 if (current_step >= ITERATIONS){
-                                    update_state(STATE_FINISHED);
+                                    update_state(STATE_WAITING);
                                 }
                             }
                         } else {
@@ -355,7 +355,7 @@ control Aggregation(inout headers hdr) {
                             send_error(STATE_WRONG_STEP);
                         }
                     }
-                } else if (current_state == STATE_FINISHED){
+                } else if (current_state == STATE_WAITING){
                     @atomic {
                         load_variables();
                         // state is finished, send state

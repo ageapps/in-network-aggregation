@@ -143,9 +143,9 @@ class PServer(object):
                     if current_step == iterations:
                         print('Finished')
                         sys.exit()
-                        current_status = STATE_FINISHED
+                        current_status = STATE_WAITING
 
-            elif current_status == STATE_FINISHED:
+            elif current_status == STATE_WAITING:
                 print('Finished')
                 sys.exit()
                 pass

@@ -197,7 +197,7 @@ action send_parameters() {
     apply {
         if (hdr.agg.state == STATE_RESET){
             @atomic {
-                current_state = STATE_FINISHED;
+                current_state = STATE_WAITING;
                 current_step = 0;
                 node_count = 0;
                 
@@ -243,7 +243,7 @@ action send_parameters() {
                                 update_node_count(0);
                                 increment_step();
                                 if (current_step >= ITERATIONS){
-                                    update_state(STATE_FINISHED);
+                                    update_state(STATE_WAITING);
                                 }
                                 result = RESULT_MCAST;
                             } else {
@@ -255,7 +255,7 @@ action send_parameters() {
                             send_error(STATE_WRONG_STEP);
                         }
                     }
-                } else if (current_state == STATE_FINISHED){
+                } else if (current_state == STATE_WAITING){
                     @atomic {
                         load_variables();
                         // state is finished, send state

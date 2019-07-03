@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../utils'))
 
 from ml.pserver_avg import *
 
@@ -10,7 +10,7 @@ HOST = ''
 iterations = 50
 eta = 0.001
 input_size = 200
-input_features = 1
+input_features = 4
 output_classes = 1
 scale_factor = 1000
 

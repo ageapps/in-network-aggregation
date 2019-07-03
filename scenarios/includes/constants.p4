@@ -11,7 +11,7 @@ const bit<2> RESULT_DROP = 1;
 const bit<2> RESULT_MCAST = 2;
 
 // state messages
-const bit<8> STATE_FINISHED = 0;
+const bit<8> STATE_WAITING = 0;
 const bit<8> STATE_SETUP = 1;
 const bit<8> STATE_LEARNING = 2;
 const bit<8> STATE_ERROR = 3;

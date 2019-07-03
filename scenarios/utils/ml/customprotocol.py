@@ -1,7 +1,7 @@
 import struct
 import re
 
-STATE_FINISHED = 0
+STATE_WAITING = 0
 STATE_SETUP = 1
 STATE_LEARNING = 2
 STATE_ERROR = 3

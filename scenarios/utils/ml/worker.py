@@ -55,7 +55,7 @@ class Worker(object):
             state_str = 'SETUP'
         elif state == STATE_LEARNING:
             state_str = 'LEARNING'
-        elif state == STATE_FINISHED:
+        elif state == STATE_WAITING:
             state_str = 'FINISHED'
         elif state == STATE_ERROR:
             state_str = 'ERROR'
@@ -143,7 +143,7 @@ class Worker(object):
                     raise Exception('Error on setup | message:{}'.format(answer))
 
                 failed += 1
-                print('Timeout {} | trying it again...'.format(i))
+                print('Timeout {} | trying it again...'.format(failed))
                 continue
 
             state = answer[0]
@@ -159,7 +159,7 @@ class Worker(object):
             if state == current_state:
                 print('Worker successfully registered')
                 break
-            elif state == STATE_FINISHED:
+            elif state == STATE_WAITING:
                 print('No learing process available')
                 time.sleep(2)
             else :
@@ -189,8 +189,9 @@ class Worker(object):
             print("BIZANTINE FACTOR - " + str(self.bizantine_factor))
             print("++++++++++++++++++++++++++")
 
-        X, Y = fn_data_generator(input_size, output_classes)
+        X, Y = fn_data_generator(input_size, input_features, output_classes)
         model = Linear(X.shape[1], Y.shape[1])
+
         optim = LossMSE()
         trainer = Trainer(model, optim, v=True)
 

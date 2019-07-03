@@ -11,7 +11,7 @@ import subprocess
 
 
 
-STATE_FINISHED = 0
+STATE_WAITING = 0
 STATE_SETUP = 1
 STATE_LEARNING = 2
 STATE_ERROR = 3
@@ -36,7 +36,7 @@ worker_number = 5
 iterations = 50
 eta = 0.001
 input_size = 200
-input_features = 1
+input_features = 5
 output_classes = 1
 scale_factor = 1000
 
@@ -68,7 +68,7 @@ def reset_learning():
     print('Nodes reset')
     assert write_register('MyIngress.aggregation.counters_register', STEP_IDX, 0), 'Error resetting step count'
     print('Step reset')
-    assert write_register('MyIngress.aggregation.counters_register', STATE_IDX, STATE_FINISHED), 'Error resetting state'
+    assert write_register('MyIngress.aggregation.counters_register', STATE_IDX, STATE_WAITING), 'Error resetting state'
     print('State reset')
 
 def configure_learning():
