@@ -92,9 +92,9 @@ class PServer(object):
                 # setup phase
                 if client_address not in workers:
                     print('Registering worker: {}'.format(client_address))
-                    workers.append(client_address)
                     print('Sending setup')
-                    msg = self.get_formated_message(STATE_SETUP, worker_num, current_step, learning_parameters)
+                    msg = self.get_formated_message(STATE_SETUP, worker_num, len(workers), learning_parameters)
+                    workers.append(client_address)
                     self.server.send_message(msg, client_address)
                 else:
                     print('Worker {} is already registered'.format(client_address))

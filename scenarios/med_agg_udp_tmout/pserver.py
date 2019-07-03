@@ -7,7 +7,7 @@ from ml.pserver_med import *
 PORT = 12344
 HOST = ''
 
-iterations = 50
+iterations = 10
 eta = 0.001
 input_size = 200
 input_features = 5

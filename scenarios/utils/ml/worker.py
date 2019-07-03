@@ -189,7 +189,7 @@ class Worker(object):
             print("BIZANTINE FACTOR - " + str(self.bizantine_factor))
             print("++++++++++++++++++++++++++")
 
-        X, Y = fn_data_generator(input_size, input_features, output_classes)
+        X, Y = fn_data_generator(input_size, input_features, output_classes, step)
         model = Linear(X.shape[1], Y.shape[1])
 
         optim = LossMSE()
