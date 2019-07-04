@@ -99,6 +99,7 @@ control Aggregation(inout headers hdr) {
 
     action send_parameters() {
         hdr.agg.node_count = (bit<8>)NODE_NUMBER;
+        hdr.agg.step = node_count;
         hdr.agg.param_0 = ITERATIONS;
 
         // ETA

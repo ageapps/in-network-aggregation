@@ -11,10 +11,11 @@ from ml.worker import *
 
 HOST = '127.0.0.1'
 PORT = 12344
+PARAM_NUMBER = 6
 
 def generate_data(input_size, input_features, output_classes, step):
     X = 2 * np.random.rand(input_size, input_features)
-    Y = 4 + 3*X[:,:output_classes]+ 0.5*np.random.randn(input_size, output_classes)
+    Y = 4 + 2*X[:,:output_classes] + 1.5*np.random.randn(input_size, output_classes)
     return X, Y
 
 def main():
@@ -35,7 +36,7 @@ def main():
     if len(sys.argv) > 3:
         bizantine_factor = int(sys.argv[3])
 
-    worker = Worker(port, host, worker_name, bizantine_factor, median=False)
+    worker = Worker(port, host, worker_name, PARAM_NUMBER, bizantine_factor, median=False)
 
     try:
         while True:

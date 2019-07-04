@@ -7,12 +7,13 @@ from ml.pserver_med import *
 PORT = 12344
 HOST = ''
 
-iterations = 10
+iterations = 100
 eta = 0.001
 input_size = 200
-input_features = 5
+input_features = 1
 output_classes = 1
 scale_factor = 1000
+PARAM_NUMBER = 6
 
 scaled_eta = int(eta * scale_factor)
 
@@ -38,7 +39,7 @@ def main():
     if len(sys.argv) > 2:
         port = int(sys.argv[2])
 
-    pserver = PServer(port, HOST)
+    pserver = PServer(port, HOST, PARAM_NUMBER)
     pserver.run(worker_num,learning_parameters, bcast=False)
     
 

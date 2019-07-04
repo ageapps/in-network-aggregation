@@ -20,9 +20,10 @@ def get_medians(param_mtx):
 
 
 class PServer(object):
-    def __init__(self, port, host):
+    def __init__(self, port, host, params):
         self.port = port
-        protocol = CustomProtocol(header_mask='! B B I i i i i i i')
+        s_params = ' '.join(["i"]*params)
+        protocol = CustomProtocol(header_mask='! B B I ' + s_params)
         self.server = UDPServer(port, host, protocol=protocol)
 
     def get_formated_message(self, status, workers, step, weights):

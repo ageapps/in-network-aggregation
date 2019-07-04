@@ -57,6 +57,17 @@
         "dstAddr": "00:00:00:00:01:05",
         "port": 5
       }
+    },
+    {
+      "table": "MyIngress.ip_forward.ipv4_lpm",
+      "match": {
+        "hdr.ipv4.dstAddr": ["10.0.6.6", 32]
+      },
+      "action_name": "MyIngress.ip_forward.ipv4_forward",
+      "action_params": {
+        "dstAddr": "00:00:00:00:01:06",
+        "port": 6
+      }
     }
   ]
 }

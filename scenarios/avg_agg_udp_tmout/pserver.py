@@ -7,13 +7,13 @@ from ml.pserver_avg import *
 PORT = 12344
 HOST = ''
 
-iterations = 50
+iterations = 100
 eta = 0.001
 input_size = 200
-input_features = 4
+input_features = 1
 output_classes = 1
 scale_factor = 1000
-
+PARAM_NUMBER = 6
 scaled_eta = int(eta * scale_factor)
 
 learning_parameters = [
@@ -38,7 +38,7 @@ def main():
     if len(sys.argv) > 2:
         port = int(sys.argv[2])
 
-    pserver = PServer(port, HOST)
+    pserver = PServer(port, HOST, PARAM_NUMBER)
     pserver.run(worker_num,learning_parameters, bcast=False)
     
 

@@ -8,9 +8,10 @@ from .customprotocol import *
 
 
 class PServer(object):
-    def __init__(self, port, host):
+    def __init__(self, port, host, params):
         self.port = port
-        protocol = CustomProtocol(header_mask='! B B I i i i i i i')
+        s_params = ' '.join(["i"]*params)
+        protocol = CustomProtocol(header_mask='! B B I ' + s_params)
         self.server = UDPServer(port, host, protocol=protocol)
 
     def get_formated_message(self, status, workers, step, weights):
@@ -22,8 +23,9 @@ class PServer(object):
         return values
 
     def aggregate_values(self, params, new_values):
+        print('Old values', params)
         if len(params) == 0:
-            print('Params size is 0', params, new_values)
+            print('Params size is 0', new_values)
             return new_values
 
         assert len(params) == len(
@@ -32,7 +34,8 @@ class PServer(object):
         print('Aggregating parameters')
         for i, param in enumerate(params):
             params[i] = (param + new_values[i])
-
+        
+        print('New values', params)
         return params
 
     def send_error(self, destination, error=STATE_ERROR, workers=0):
@@ -119,6 +122,7 @@ class PServer(object):
 
                 if len(workers) == worker_num:
                     print('All workers aggregated in step:', current_step)
+                    acc_aggregation = curr_aggregation
                     curr_aggregation = []
                     
                     if self.bcast:
