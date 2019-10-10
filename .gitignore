@@ -2,12 +2,15 @@
 .vagrant/
 
 fig-*
+error-*
+time-*
+train-*
 
 logs/
 pcaps/
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 
